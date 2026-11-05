@@ -224,7 +224,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Ir para</h3><nav class="nav">
         <a href="#cRes">Resumo da semana</a><a href="#cEmp">Por empreendimento</a><a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a>
-        <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Top 10 clientes</a>
+        <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Clientes inadimplentes</a>
         <a href="#cRec">Recuperação de crédito</a><a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a></nav></div>
     </details>
   </aside>
@@ -275,9 +275,9 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
     </div>
 
     <section class="card" id="cTop">
-      <h2>Top 10 clientes inadimplentes</h2>
-      <p class="sub">Atual × semana anterior · último status do relatório de Títulos em Cobrança</p>
-      <div class="scroll" style="max-height:none"><table id="tTop" class="cmp"></table></div>
+      <h2>Clientes inadimplentes</h2>
+      <p class="sub" id="topSub">Atual × semana anterior · último status do relatório de Títulos em Cobrança</p>
+      <div class="scroll" style="max-height:620px"><table id="tTop" class="cmp"></table></div>
     </section>
 
     <section class="card" id="cRec">
@@ -593,7 +593,8 @@ function renderTipo(){
 function porCliente(arr){const m=new Map(); arr.forEach(t=>{const k=t.cd_cliente; if(!m.has(k)) m.set(k,{cd:k,nome:t.cliente,emp:new Set(),tit:[]}); const o=m.get(k); o.emp.add(t.empresa); o.tit.push(t);}); return m;}
 function renderTop(){
   const a=porCliente(AT()), b=porCliente(AN());
-  const L=[...a.values()].map(o=>({...o,v:soma(o.tit),vb:b.has(o.cd)?soma(b.get(o.cd).tit):0})).sort((x,y)=>y.v-x.v).slice(0,10);
+  const L=[...a.values()].map(o=>({...o,v:soma(o.tit),vb:b.has(o.cd)?soma(b.get(o.cd).tit):0})).sort((x,y)=>y.v-x.v);
+  $("topSub").textContent=`${L.length} clientes, do maior para o menor saldo · atual × semana anterior · último status do relatório de Títulos em Cobrança`;
   $("tTop").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th>Atual</th><th>Anterior</th><th>Δ</th><th>Títulos</th><th>Maior atraso</th><th class="l">Status da cobrança</th></tr></thead><tbody>`+
     L.map((o,i)=>{const s=statusCli(o.cd), sj=o.tit.some(t=>t.subjudice);
       return `<tr><td>${i+1}</td><td class="cl">${esc(o.nome)} ${sj?'<span class="tag sj">sub judice</span>':""}<span class="mini">${[...o.emp].map(e=>esc(nomeE(e))).join(", ")} · ${new Set(o.tit.map(t=>t.unid)).size} unid.</span></td><td>${fmtN(o.v)}</td><td>${o.vb?fmtN(o.vb):"novo"}</td>${o.vb?dV(o.v,o.vb):"<td></td>"}<td>${o.tit.length}</td><td>${Math.max(...o.tit.map(t=>t.dias_aj))} dias</td><td class="wrap">${s?`<b>${fmtD(s.data)}</b> · ${esc(s.texto)}`:"—"}</td></tr>`;}).join("")+"</tbody>";

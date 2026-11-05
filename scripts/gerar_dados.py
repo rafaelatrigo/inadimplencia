@@ -272,6 +272,10 @@ def montar():
     gravar_json(DADOS / "retratos" / f"{data_base.isoformat()}.json", {"data": data_base.isoformat(), "titulos": base})
     anteriores = sorted(p for p in (DADOS / "retratos").glob("*.json") if p.stem < data_base.isoformat())
     ant = ler_json(anteriores[-1], {"data": None, "titulos": []}) if anteriores else {"data": None, "titulos": []}
+    # sub judice na semana anterior: o mesmo documento que está sub judice hoje já era sub judice antes
+    # (a marcação pode não ter sido feita na semana anterior); assim a comparação fica justa
+    for t in ant["titulos"]:
+        t["subjudice"] = bool(t.get("subjudice")) or chave(t["documento"], "").split("|")[0] in subj
 
     # Sienge completo (o serviço usa para registrar um título nos Tratados com os dados do dia)
     gravar_json(DADOS / "sienge_atual.json", {"data": data_base.isoformat(), "titulos": {r["chave"]: r for r in sienge}})
