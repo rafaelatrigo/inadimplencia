@@ -281,8 +281,32 @@ def _titulo(r):
             "empresa": str(r[24] or "").strip(), "cd_empresa": str(r[23]).strip()}
 
 
+def copia_planilha(f):
+    """Copia a planilha para a pasta de dados antes de ler. Se ela estiver aberta no Excel ou sincronizando no OneDrive
+    (PermissionError), tenta de novo algumas vezes; se não der, usa a última cópia boa e avisa no painel."""
+    import shutil, time
+    destino = DADOS / "planilha_ultima_lida.xlsx"
+    for tentativa in range(4):
+        try:
+            shutil.copyfile(f, destino)
+            gravar_json(DADOS / "planilha_ultima_lida.json", {"arquivo": f.name, "lida_em": datetime.datetime.now().isoformat(timespec="seconds")})
+            return destino
+        except PermissionError:
+            time.sleep(3)
+    info = ler_json(DADOS / "planilha_ultima_lida.json", None)
+    if destino.exists() and info:
+        avisos.append(f"A planilha {f.name} estava bloqueada (aberta no Excel ou sincronizando no OneDrive). "
+                      f"Usei a última cópia lida ({info['arquivo']}, {info['lida_em'][:16].replace('T', ' ')}). Feche a planilha e clique em Publicar agora.")
+        return destino
+    avisos.append(f"Não consegui abrir {f.name} (aberta no Excel ou sincronizando no OneDrive): só a visão automática (Sienge). Feche a planilha e publique de novo.")
+    return None
+
+
 def ler_planilha(f):
     import openpyxl, warnings
+    f = copia_planilha(f)
+    if not f:
+        return None
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         wb = openpyxl.load_workbook(f, data_only=True, read_only=True)
@@ -380,6 +404,7 @@ def montar():
     sienge = desambiguar(ler_csv(f_csv)) if f_csv else []
     plan = achar_planilha() if usa_plan else None
     P = ler_planilha(plan[0]) if plan else None
+    if plan and not P: plan = None
     if P:
         for k in ("atual", "anterior", "tratados"): desambiguar(P[k])
     if usa_plan and not plan: avisos.append("Não achei a planilha de inadimplência na pasta configurada: só a visão automática (Sienge).")

@@ -152,6 +152,10 @@ def observar():
     while True:
         time.sleep(intervalo)
         try:
+            # a planilha estava aberta/bloqueada na última leitura: tenta de novo a cada 3 minutos até conseguir
+            bloq = pasta_dados() / ".planilha_bloqueada"
+            if bloq.exists() and time.time() - bloq.stat().st_mtime >= 180 and not estado["executando"]:
+                bloq.touch(); publicar("nova tentativa de ler a planilha", so_se_mudou=False)
             atual = assinatura_pastas(cfg())
             if atual != ultima:
                 ultima, mudou_em = atual, time.time()
