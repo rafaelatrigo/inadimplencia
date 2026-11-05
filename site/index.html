@@ -173,10 +173,20 @@ input.ck{accent-color:var(--brand)}
 .nav{display:flex;flex-direction:column;gap:4px}
 .nav a{color:var(--text);text-decoration:none;font-size:12.5px;padding:4px 8px;border-radius:6px}
 .nav a:hover{background:var(--surface-2)}
-td.cl{white-space:normal;min-width:190px;text-align:left}
+td.cl{white-space:normal;min-width:160px;text-align:left}
 .mini{display:block;font-size:11.5px;color:var(--muted);margin-top:1px}
 table.cmp th,table.cmp td{padding:6px 8px}
-table.cmp td.wrap{min-width:220px;max-width:340px}
+th{white-space:normal;vertical-align:bottom;line-height:1.25}
+table.cmp{font-size:13px}
+#tPct th{position:static}
+.scroll{overflow-x:auto;overflow-y:auto}
+.nav a{border-left:3px solid transparent}
+.resumo{font-size:15px;line-height:1.6;margin:4px 0 14px;color:var(--text)}
+.resumo b{font-weight:650}
+.resumo .up,.resumo .down{font-weight:650}
+#tRes1 td:first-child{font-weight:600}
+.nav a.on{background:var(--brand-2);color:var(--brand);font-weight:650;border-left-color:var(--brand)}
+table.cmp td.wrap{min-width:180px;max-width:320px}
 </style>
 </head>
 <body>
@@ -213,25 +223,34 @@ table.cmp td.wrap{min-width:220px;max-width:340px}
       <p style="margin:0 0 12px;font-size:12px;color:var(--muted)" id="dica">Clique para filtrar. Segure <b>Ctrl</b> e clique para selecionar mais de um.</p>
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Ir para</h3><nav class="nav">
-        <a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a><a href="#cEmp">Por empreendimento</a>
+        <a href="#cRes">Resumo da semana</a><a href="#cEmp">Por empreendimento</a><a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a>
         <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Top 10 clientes</a>
-        <a href="#cRec">Recuperação de crédito</a><a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a><a href="#cAv">Avisos</a></nav></div>
+        <a href="#cRec">Recuperação de crédito</a><a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a></nav></div>
     </details>
   </aside>
   <main>
-    <section class="tiles" id="tiles"></section>
+    <div id="avisos"></div>
+    <section class="card" id="cRes" style="border-top:3px solid var(--brand)">
+      <h2 id="resTit">Resumo da semana</h2>
+      <p class="resumo" id="resTxt"></p>
+      <div class="scroll" style="max-height:none"><table id="tRes1" class="cmp"></table></div>
+      <p class="foot">▼ queda (bom: saldo/títulos reduzidos) · ▲ alta (atenção: saldo/títulos aumentaram)</p>
+    </section>
+
+    <section class="card" id="cEmp">
+      <h2>Concentração por empreendimento</h2>
+      <p class="sub" id="empSub"></p>
+      <div class="scroll" style="max-height:none"><table id="tEmp" class="cmp"></table></div>
+    </section>
 
     <section class="card" id="cPct">
       <h2>% Inadimplência sobre recebimentos esperados</h2>
       <p class="sub" id="pctSub"></p>
       <div class="barra"><label for="mesRef" style="font-size:13px;color:var(--text-2)">Mês de referência</label><select class="sel" id="mesRef"></select>
         <button class="btn prim edit" id="btnFech" type="button">Registrar fechamento</button><span class="foot" id="fechInfo" style="margin:0"></span></div>
-      <div class="scroll" style="max-height:none"><table id="tPct"></table></div>
-      <div id="pctAv"></div>
-      <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600;font-size:13px">Recebimento esperado mês a mês (relatórios enviados ao BPO)</summary>
-        <div class="scroll" style="margin-top:8px"><table id="tEsp"></table></div></details>
+      <div class="scroll" style="max-height:none"><table id="tPct" class="cmp"></table></div>
       <details style="margin-top:8px" id="fechBox"><summary style="cursor:pointer;font-weight:600;font-size:13px">Fechamentos registrados (enviados à Rita)</summary>
-        <div class="scroll" style="margin-top:8px"><table id="tFech"></table></div></details>
+        <div class="scroll" style="margin-top:8px"><table id="tFech" class="cmp"></table></div></details>
     </section>
 
     <section class="card" id="cSem">
@@ -241,19 +260,14 @@ table.cmp td.wrap{min-width:220px;max-width:340px}
       <div id="chart"><div class="tip" id="tip"></div></div>
     </section>
 
-    <section class="card" id="cEmp">
-      <h2>Concentração por empreendimento</h2>
-      <p class="sub" id="empSub"></p>
-      <div class="scroll" style="max-height:none"><table id="tEmp"></table></div>
-    </section>
 
-    <div class="grid2 sec" style="grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)">
-      <section class="card" id="cAging">
+    <div>
+      <section class="card" id="cAging" style="margin-bottom:16px">
         <h2>Aging · migração entre faixas</h2>
         <p class="sub">Faixa pelo maior atraso do cliente (Dias ajustado). Sub judice fica em linha própria, fora das faixas.</p>
         <div class="scroll" style="max-height:none"><table id="tAging" class="cmp"></table></div>
       </section>
-      <section class="card" id="cTipo">
+      <section class="card" id="cTipo" style="margin-bottom:16px">
         <h2>Tipo de título</h2>
         <p class="sub">Atual × semana anterior</p>
         <div class="scroll" style="max-height:none"><table id="tTipo" class="cmp"></table></div>
@@ -293,10 +307,6 @@ table.cmp td.wrap{min-width:220px;max-width:340px}
       <div class="scroll"><table id="tTrat" class="cmp"></table></div>
     </section>
 
-    <section class="card" id="cAv">
-      <h2>Avisos e conferências</h2>
-      <div id="avisos"></div>
-    </section>
     <p class="foot" id="fontes"></p>
   </main>
 </div>
@@ -430,7 +440,7 @@ function init(){
   const ms=mesesRef(), padrao=addMes(D.data_base.slice(0,7),-1);
   if(!MESREF||!ms.includes(MESREF)) MESREF=ms.includes(padrao)?padrao:ms[ms.length-1];
   $("mesRef").innerHTML=ms.map(m=>`<option value="${m}" ${m===MESREF?"selected":""}>${mesL(m)}</option>`).join("");
-  $("mesRef").onchange=e=>{MESREF=e.target.value; renderPct();};
+  $("mesRef").onchange=e=>{MESREF=e.target.value; renderPct(); renderResumo();};
   $("stamp").innerHTML=`Relatório de ${fmtD(D.data_base)} · anterior ${fmtD(D.data_anterior)}<br>Gerado em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}`;
   $("fStatus").innerHTML=`<option value="">Todos os status</option>`+D.status_tratados.map(s=>`<option>${esc(s.status)}</option>`).join("")+`<option value="(sem)">Sem status</option>`;
   $("fStatus").onchange=renderTrat; $("qt").oninput=renderTrat; $("q").oninput=renderBase;
@@ -442,7 +452,7 @@ function init(){
 window.addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>D&&renderSem(),120)});
 const AT=()=>D.titulos.filter(okE), AN=()=>D.anterior.filter(okE);
 const statusCli=cd=>(D.cobranca&&D.cobranca.status[cd])||null;
-function render(){renderTiles();renderPct();renderSem();renderEmp();renderAging();renderTipo();renderTop();renderRec();renderBase();renderTrat();renderAvisos();}
+function render(){renderResumo();renderPct();renderSem();renderEmp();renderAging();renderTipo();renderTop();renderRec();renderBase();renderTrat();renderAvisos();}
 
 /* ---------- quadros ---------- */
 function delta(a,b,fmt,menorMelhor=true){
@@ -453,18 +463,29 @@ function delta(a,b,fmt,menorMelhor=true){
 }
 const clientes=a=>new Set(a.map(t=>t.cd_cliente)).size;
 const mais90=a=>a.filter(t=>!t.subjudice&&t.dias_aj>90);
-function renderTiles(){
-  const a=AT(), b=AN(), sa=soma(a), sb=soma(b), temAnt=!!D.data_anterior;
-  const ta=a.length?sa/a.length:0, tb=b.length?sb/b.length:0, n90=soma(mais90(a)), n90b=soma(mais90(b));
-  const sj=a.filter(t=>t.subjudice), sjb=b.filter(t=>t.subjudice);
-  const V=v=>`${fmtMil(v)}<small>R$ mil</small>`, M=v=>"R$ "+fmtMil(v)+" mil", I=v=>v.toLocaleString("pt-BR"), P=v=>(v*100).toFixed(1).replace(".",",")+" p.p.";
-  $("tiles").innerHTML=`
-   <div class="tile" title="Soma do Total (com juros, multa e correção) dos títulos na base"><div class="k">Saldo inadimplente</div><div class="v">${V(sa)}</div>${delta(sa,temAnt?sb:null,M)}</div>
-   <div class="tile"><div class="k">Títulos</div><div class="v">${I(a.length)}</div>${delta(a.length,temAnt?b.length:null,I)}</div>
-   <div class="tile"><div class="k">Clientes inadimplentes</div><div class="v">${I(clientes(a))}</div>${delta(clientes(a),temAnt?clientes(b):null,I)}</div>
-   <div class="tile"><div class="k">Ticket médio por título</div><div class="v">${V(ta)}</div>${delta(ta,temAnt?tb:null,M)}</div>
-   <div class="tile" title="Clientes com maior atraso acima de 90 dias, sem os sub judice"><div class="k">Acima de 90 dias</div><div class="v">${V(n90)}</div><div class="delta" style="color:var(--text-2)">${fmtP(sa?n90/sa:null)} do saldo</div>${delta(sa?n90/sa:0,temAnt&&sb?n90b/sb:null,P)}</div>
-   <div class="tile" title="Situação Sub judice no relatório de Títulos em Cobrança"><div class="k">Sub judice</div><div class="v">${V(soma(sj))}</div><div class="delta" style="color:var(--text-2)">${clientes(sj)} cliente(s) · ${sj.length} títulos</div>${delta(soma(sj),temAnt?soma(sjb):null,M)}</div>`;
+function renderResumo(){
+  const a=AT(), b=AN(), temAnt=!!D.data_anterior, sa=soma(a), sb=soma(b);
+  const n90=soma(mais90(a)), n90b=soma(mais90(b)), sj=a.filter(t=>t.subjudice), sjb=b.filter(t=>t.subjudice);
+  const R=v=>"R$ "+fmtN(v), I=v=>v.toLocaleString("pt-BR"), P=v=>fmtP(v);
+  const ind=[[["Saldo total",sa,sb,R],["Ticket médio por título",a.length?sa/a.length:0,b.length?sb/b.length:0,R],["% acima de 90 dias",sa?n90/sa:0,sb?n90b/sb:0,P,true],["Sub judice / distrato unilateral",soma(sj),soma(sjb),R]],
+             [["Qtd. títulos",a.length,b.length,I],["Saldo acima de 90 dias",n90,n90b,R],["Clientes inadimplentes",clientes(a),clientes(b),I],["Clientes sub judice",clientes(sj),clientes(sjb),I]]];
+  const lin=([n,x,y,f,pp])=>{const d=x-y, cl=Math.abs(d)<1e-9?"":(d>0?"up":"down"), seta=cl?(d>0?"▲ ":"▼ "):"";
+    const dv=pp?(Math.abs(d)<1e-9?"—":(Math.abs(d)*100).toFixed(1).replace(".",",")+" p.p."):(Math.abs(d)<1e-9?"—":f(Math.abs(d)));
+    return `<tr><td>${n}</td><td>${f(x)}</td><td>${temAnt?f(y):"—"}</td><td class="${cl}">${temAnt?seta+dv:"—"}</td><td>${temAnt&&!pp&&y?fmtP(d/Math.abs(y)):"—"}</td></tr>`;};
+  const cab=`<thead><tr><th class="l">Indicador</th><th>Semana atual<br><small style="font-weight:400">${fmtD(D.data_base)}</small></th><th>Semana anterior<br><small style="font-weight:400">${fmtD(D.data_anterior)}</small></th><th>Variação</th><th>Var. %</th></tr></thead>`;
+  const ord=[ind[0][0],ind[1][0],ind[0][1],ind[1][2],ind[1][1],ind[0][2],ind[0][3],ind[1][3]];
+  $("tRes1").innerHTML=cab+"<tbody>"+ord.map(lin).join("")+"</tbody>";
+  // frase-resumo
+  const ka=new Set(D.titulos.map(t=>t.chave)), kt=new Set(D.tratados.map(t=>t.chave)), rec=b.filter(t=>!ka.has(t.chave)&&!kt.has(t.chave));
+  const pct=st.emps.map(linhaPct).filter(Boolean), espAc=pct.reduce((x,l)=>x+l.espAc,0), salAc=pct.reduce((x,l)=>x+l.saldoAc,0);
+  const d=sa-sb, mil=v=>"R$ "+fmtMil(v)+" mil";
+  $("resTit").textContent=`Resumo da semana · ${rotFiltro()}`;
+  $("resTxt").innerHTML=`Saldo inadimplente de <b>${mil(sa)}</b> em ${fmtD(D.data_base)}`+
+    (temAnt?`, <span class="${d>0?"up":"down"}">${d>0?"▲ alta":"▼ queda"} de ${mil(Math.abs(d))} (${fmtP(sb?Math.abs(d)/sb:null)})</span> sobre ${fmtD(D.data_anterior)}`:"")+
+    `. São <b>${I(a.length)} títulos</b> de <b>${I(clientes(a))} clientes</b>; <b>${fmtP(sa?n90/sa:null)}</b> do saldo está acima de 90 dias`+
+    (sj.length?` e ${mil(soma(sj))} está sub judice`:"")+`. `+
+    (temAnt?`Recuperado na semana: <b>${mil(soma(rec))}</b> (${rec.length} título${rec.length===1?"":"s"}). `:"")+
+    (espAc?`Inadimplência acumulada de <b>${fmtP(salAc/espAc)}</b> sobre o recebimento esperado até ${mesC(MESREF)}.`:"");
 }
 
 /* ---------- % inadimplência ---------- */
@@ -486,17 +507,14 @@ function renderPct(){
   const T=L.reduce((t,l)=>({espAc:t.espAc+l.espAc,saldoAc:t.saldoAc+l.saldoAc,espMes:t.espMes+(l.espMes||0),saldoMes:t.saldoMes+l.saldoMes,
     espAnt:t.espAnt+(l.espAnt||0),saldoAnt:t.saldoAnt+l.saldoAnt,qtd:t.qtd+l.qtd,unid:t.unid+l.unid}),{espAc:0,saldoAc:0,espMes:0,saldoMes:0,espAnt:0,saldoAnt:0,qtd:0,unid:0});
   $("pctSub").innerHTML=`Acumulado: do mês do título vencido mais antigo de cada empreendimento até <b>${mesL(MESREF)}</b>. Saldo acumulado = saldo inadimplente total da base de ${fmtD(D.data_base)}. Mês: títulos vencidos no mês ÷ recebimento esperado do mês.`;
-  const r=(l,cls="")=>`<tr class="${cls}"><td>${esc(l.nome)}</td><td>${l.ini?mesC(l.ini)+" a "+mesC(l.fim):""}</td><td>${fmtN(l.espAc)}</td><td>${fmtN(l.saldoAc)}</td><td class="pct">${fmtP(l.espAc?l.saldoAc/l.espAc:null)}</td>
+  const r=(l,cls="")=>`<tr class="${cls}"><td class="cl">${esc(l.nome)}<span class="mini">${l.ini?mesC(l.ini)+" a "+mesC(l.fim)+" · ":""}${l.qtd} títulos · ${l.unid} unid.</span></td>
+    <td>${fmtN(l.espAc)}</td><td>${fmtN(l.saldoAc)}</td><td class="pct">${fmtP(l.espAc?l.saldoAc/l.espAc:null)}</td>
     <td>${l.espMes==null?"—":fmtN(l.espMes)}</td><td>${fmtN(l.saldoMes)}</td><td class="pct">${fmtP(l.espMes?l.saldoMes/l.espMes:null)}</td>
-    <td>${l.espAnt==null?"—":fmtN(l.espAnt)}</td><td>${fmtN(l.saldoAnt)}</td><td class="pct">${fmtP(l.espAnt?l.saldoAnt/l.espAnt:null)}</td><td>${l.qtd}</td><td>${l.unid}</td></tr>`;
-  $("tPct").innerHTML=`<thead><tr><th>Empreendimento</th><th>Período acumulado</th><th>Esperado acumulado</th><th>Saldo inadimplente acumulado</th><th>% acumulado</th>
-    <th>Esperado ${mesC(MESREF)}</th><th>Vencido em ${mesC(MESREF)}</th><th>% ${mesC(MESREF)}</th><th>Esperado ${mesC(ant)}</th><th>Vencido em ${mesC(ant)}</th><th>% ${mesC(ant)}</th><th>Títulos</th><th>Unidades</th></tr></thead>
+    <td>${l.espAnt==null?"—":fmtN(l.espAnt)}</td><td>${fmtN(l.saldoAnt)}</td><td class="pct">${fmtP(l.espAnt?l.saldoAnt/l.espAnt:null)}</td></tr>`;
+  const g=t=>`<th colspan="3" style="text-align:center;border-bottom:1px solid var(--line)">${t}</th>`;
+  $("tPct").innerHTML=`<thead><tr><th rowspan="2" class="l">Empreendimento</th>${g("Acumulado")}${g("Mês de referência · "+mesC(MESREF))}${g("Mês anterior · "+mesC(ant))}</tr>
+    <tr><th>Esperado</th><th>Inadimplente</th><th>%</th><th>Esperado</th><th>Vencido no mês</th><th>%</th><th>Esperado</th><th>Vencido no mês</th><th>%</th></tr></thead>
     <tbody>${L.map(l=>r(l)).join("")}${L.length>1?r({nome:"Total consolidado",ini:null,...T,espMes:T.espMes||null,espAnt:T.espAnt||null},"tot"):""}</tbody>`;
-  $("pctAv").innerHTML=L.filter(l=>l.faltam.length).map(l=>`<div class="av">${esc(l.nome)}: sem recebimento esperado registrado em <b>${l.faltam.map(mesC).join(", ")}</b> (o título vencido mais antigo é de ${mesC(l.ini)}). Esses meses ficam fora do esperado acumulado.</div>`).join("");
-  // esperado mês a mês
-  const ms=[...new Set(Object.values(D.esperado).flatMap(o=>Object.keys(o)))].sort();
-  $("tEsp").innerHTML=`<thead><tr><th>Mês</th>${st.emps.map(e=>`<th>${esc(nomeE(e))}</th>`).join("")}<th>Fonte</th></tr></thead><tbody>`+
-    ms.map(m=>`<tr><td>${mesL(m)}</td>${st.emps.map(e=>`<td>${D.esperado[e]&&D.esperado[e][m]?fmtN(D.esperado[e][m].valor):"—"}</td>`).join("")}<td class="wrap">${esc([...new Set(st.emps.map(e=>D.esperado[e]&&D.esperado[e][m]&&D.esperado[e][m].fonte).filter(Boolean))].join(" · "))}</td></tr>`).join("")+"</tbody>";
   // fechamento
   const fx=D.fechamentos||[], atual=fx.find(f=>f.mes===MESREF);
   $("btnFech").textContent=`Registrar fechamento de ${mesL(MESREF)}`;
@@ -641,7 +659,7 @@ function renderTrat(){
   $("tTrat").innerHTML=`<thead><tr><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>Vencimento</th><th>Total</th><th class="l">Status de saída</th><th class="l">No Sienge</th><th class="l">Observação</th><th class="edit"></th></tr></thead><tbody>`+
     L.map(t=>`<tr><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)} <span class="tag">${esc(t.tc)}</span></td><td>${fmtD(t.venc)}</td><td>${fmtN(t.total)}</td>
       <td class="l">${t.status?esc(t.status):'<span class="tag am">sem status</span>'}<span class="mini">${t.tratado_em?"tratado em "+fmtD(t.tratado_em):"da planilha"}</span></td><td class="l">${t.no_sienge?'<span class="tag">em aberto</span>':(t.caixa==="Distrato"?'<span class="tag ok">saiu do Sienge</span>':'<span class="tag ok">saiu (compensado)</span>')}</td>
-      <td class="wrap" style="min-width:140px;max-width:240px">${esc(t.obs&&t.obs!==t.status?t.obs:"")}</td>
+      <td class="wrap" style="min-width:110px;max-width:220px">${esc(t.obs&&t.obs!==t.status?t.obs:"")}</td>
       <td class="edit" style="white-space:nowrap"><button class="btn" type="button" data-ed="${esc(t.chave)}">Editar</button> <button class="btn" type="button" data-un="${esc(t.chave)}">Desfazer</button></td></tr>`).join("")+"</tbody>";
   $("tTrat").querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>{const t=D.tratados.find(x=>x.chave===b.dataset.ed);
     abrirModal("Editar tratado",`${t.cliente} · ${t.documento} parc. ${t.parc} · R$ ${fmtN(t.total)}`,t.status,t.obs,
@@ -653,15 +671,21 @@ function renderTrat(){
 
 /* ---------- avisos ---------- */
 function renderAvisos(){
-  const av=[];
-  (D.avisos||[]).forEach(a=>av.push(`<div class="av crit">${esc(a)}</div>`));
-  if(D.cobranca&&D.cobranca.datas_estranhas.length) av.push(`<div class="av"><b>Datas fora do esperado no relatório de Títulos em Cobrança</b> (${esc(D.cobranca.arquivo)}, de ${fmtD(D.cobranca.data)}). Datas futuras não são usadas como último status. Vale corrigir no Sienge:<ul style="margin:6px 0 0;padding-left:18px">`+
-    D.cobranca.datas_estranhas.map(x=>`<li>${esc(x.cliente)} (${esc(x.documento||"")}): <b>${fmtD(x.data)}</b> · ${esc(x.texto)}</li>`).join("")+"</ul></div>");
-  const semStatus=D.titulos.filter(t=>okE(t)&&!statusCli(t.cd_cliente));
-  if(semStatus.length) av.push(`<div class="av">${new Set(semStatus.map(t=>t.cd_cliente)).size} cliente(s) da base sem lançamento no relatório de Títulos em Cobrança: ${[...new Set(semStatus.map(t=>t.cliente))].map(esc).join(", ")}.</div>`);
-  if(D.fora_regra&&D.fora_regra.length) av.push(`<div class="av" style="border-left-color:var(--muted)">Clientes fora da base pela regra dos ${D.regra_dias} dias (todos os títulos vencidos deles têm até ${D.regra_dias} dias de atraso, a maioria vencida nos últimos dias): ${D.fora_regra.length}.<details><summary style="cursor:pointer">ver nomes</summary>${D.fora_regra.map(esc).join(", ")}</details></div>`);
-  $("avisos").innerHTML=av.join("")||`<p class="foot">Nenhum aviso.</p>`;
+  const el=$("avisos"); el.innerHTML=(D.avisos||[]).map(a=>`<div class="av crit">${esc(a)}</div>`).join("");
 }
+/* ---------- menu lateral: destaca a seção que está na tela ---------- */
+(function(){
+  const links=[...document.querySelectorAll(".nav a")], secoes=links.map(a=>document.querySelector(a.getAttribute("href")));
+  const marcar=id=>links.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+id));
+  let travado=0;
+  links.forEach(a=>a.addEventListener("click",()=>{marcar(a.getAttribute("href").slice(1)); travado=Date.now();}));
+  const vis=new Map();
+  const obs=new IntersectionObserver(es=>{ es.forEach(e=>vis.set(e.target.id,e.isIntersecting?e.boundingClientRect.top:null));
+    if(Date.now()-travado<900) return;
+    const ativos=secoes.filter(x=>x&&vis.get(x.id)!=null); if(!ativos.length) return;
+    marcar(ativos.reduce((m,x)=>Math.abs(vis.get(x.id))<Math.abs(vis.get(m.id))?x:m).id); },{rootMargin:"-15% 0px -55% 0px"});
+  secoes.forEach(x=>x&&obs.observe(x));
+})();
 </script>
 </body>
 </html>
