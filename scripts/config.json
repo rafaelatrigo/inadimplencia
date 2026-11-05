@@ -54,5 +54,15 @@
     ],
     "intervalo_segundos": 60,
     "estabilizar_segundos": 60
-  }
+  },
+  "ignorar_titulos": [
+    {
+      "documento": "CT.CVCAROZO5201278",
+      "parcelas": [
+        "1/4C",
+        "2/23C"
+      ],
+      "obs": "PRIME AUDITORIA E CONSULTORIA EMPRESARIA - pago; desconsiderar do painel"
+    }
+  ]
 }

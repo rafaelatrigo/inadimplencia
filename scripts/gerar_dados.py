@@ -393,22 +393,28 @@ def desambiguar(lst):
     return lst
 
 
+def sem_ignorados(lst):
+    """Títulos em config.json > ignorar_titulos saem de tudo (base, semana anterior, Tratados), como se nunca tivessem existido."""
+    ign = {chave(x["documento"], p) for x in cfg.get("ignorar_titulos", []) for p in x.get("parcelas", [])}
+    return [t for t in lst if t["chave"].split("#")[0] not in ign] if ign else lst
+
+
 def montar():
     doc = lambda t: chave(t["documento"], "").split("|")[0]
     usa_plan = bool(cfg.get("pasta_planilha"))
-    trat_painel = [t for t in ler_json(DADOS / "tratados.json", []) if not (usa_plan and t.get("origem") == "planilha")]
+    trat_painel = sem_ignorados([t for t in ler_json(DADOS / "tratados.json", []) if not (usa_plan and t.get("origem") == "planilha")])
     cob, f_cob = None, achar_cobranca()
     if f_cob: cob = ler_cobranca(f_cob)
     else: avisos.append("Não achei o PDF de Títulos em Cobrança na pasta de entrada.")
     if not cob: cob = {"arquivo": None, "data": None, "status": {}, "subjudice_docs": [], "datas_estranhas": []}
     try: f_csv = achar_csv()
     except SystemExit: f_csv = None
-    sienge = desambiguar(ler_csv(f_csv)) if f_csv else []
+    sienge = desambiguar(sem_ignorados(ler_csv(f_csv))) if f_csv else []
     plan = achar_planilha() if usa_plan else None
     P = ler_planilha(plan[0]) if plan else None
     if plan and not P: plan = None
     if P:
-        for k in ("atual", "anterior", "tratados"): desambiguar(P[k])
+        for k in ("atual", "anterior", "tratados"): P[k] = desambiguar(sem_ignorados(P[k]))
     if usa_plan and not plan: avisos.append("Não achei a planilha de inadimplência na pasta configurada: só a visão automática (Sienge).")
     if not f_csv and not P: sys.exit("Não achei o CSV do Contas a Receber nem a planilha de inadimplência.")
 
@@ -444,7 +450,7 @@ def montar():
         fora_regra = sorted({r["cliente"] for r in cand if maior[r["cd_cliente"]] <= REGRA})
         anteriores = sorted(p for p in (DADOS / "retratos").glob("*.json") if p.stem < data_base.isoformat())
         ant = ler_json(anteriores[-1], {"data": None, "titulos": []}) if anteriores else {"data": None, "titulos": []}
-        desambiguar(ant["titulos"])
+        ant["titulos"] = desambiguar(sem_ignorados(ant["titulos"]))
         for t in ant["titulos"]: t["subjudice"] = bool(t.get("subjudice")) or doc(t) in subj
         dias_ajustado(base); dias_ajustado(ant["titulos"])
         base.sort(key=lambda r: (r["empresa"], r["cliente"], r["venc"]))
