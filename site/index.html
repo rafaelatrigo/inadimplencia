@@ -240,7 +240,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
     <section class="card" id="cRec">
       <h2>Recuperação de crédito · comparativo semanal</h2>
       <p class="sub" id="recSub"></p>
-      <section class="tiles" id="recTiles" style="margin-bottom:12px"></section>
+      <section class="tiles" id="recTiles" style="margin-bottom:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"></section>
       <div class="scroll"><table id="tRec" class="cmp"></table></div>
     </section>
     <section class="card hidden" id="cConf">
@@ -624,14 +624,13 @@ function renderRec(){
   const ant=AN(), rec=ant.filter(t=>!ka.has(t.chave)&&!kt.has(t.chave)), sb=soma(ant), sr=soma(rec);
   const tr=D.tratados.filter(okE), cx=c=>tr.filter(t=>t.caixa===c);
   const agu=cx("Aguardando compensação").filter(t=>t.no_sienge), comp=cx("Aguardando compensação").filter(t=>!t.no_sienge), dist=cx("Distrato"), sem=cx("Sem status");
-  $("recSub").innerHTML=`<b>Recuperado</b> = títulos que estavam na base de ${fmtD(D.data_anterior)}, saíram da base de ${fmtD(D.data_base)} e <b>não</b> foram tratados. Os Tratados não-distrato ficam como <b>aguardando compensação</b> enquanto o título ainda estiver no Contas a Receber do Sienge, e passam a <b>compensado</b> quando saem dele.`;
+  $("recSub").innerHTML=`<b>Recuperado</b> = títulos que estavam na base de ${fmtD(D.data_anterior)}, saíram da base de ${fmtD(D.data_base)} e <b>não</b> foram tratados. Os Tratados não-distrato ficam como <b>aguardando compensação</b> enquanto o título ainda estiver no Contas a Receber do Sienge.`;
   const V=v=>`${fmtMil(v)}<small>R$ mil</small>`;
   $("recTiles").innerHTML=`
    <div class="tile"><div class="k">Total recuperado na semana</div><div class="v">${V(sr)}</div><div class="s">${rec.length} títulos</div></div>
    <div class="tile" title="Recuperado ÷ saldo da semana anterior"><div class="k">% recuperação</div><div class="v">${fmtP(sb?sr/sb:null)}</div><div class="s">do saldo de ${fmtD(D.data_anterior).slice(0,5)}</div></div>
    <div class="tile"><div class="k">Clientes regularizados</div><div class="v">${new Set(rec.map(t=>t.cd_cliente)).size}</div><div class="s">com título recuperado</div></div>
    <div class="tile" title="Tratados com status diferente de Distrato que ainda estão no Contas a Receber do Sienge"><div class="k">Aguardando compensação</div><div class="v">${V(soma(agu))}</div><div class="s">${agu.length} títulos ainda no Sienge</div></div>
-   <div class="tile" title="Tratados com status diferente de Distrato que já saíram do Contas a Receber do Sienge"><div class="k">Compensado (tratados)</div><div class="v">${V(soma(comp))}</div><div class="s">${comp.length} títulos já saíram do Sienge</div></div>
    <div class="tile"><div class="k">Distrato</div><div class="v">${V(soma(dist))}</div><div class="s">${dist.length} títulos${sem.length?` · <span class="alerta warn">${sem.length} sem status</span>`:""}</div></div>`;
   $("tRec").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Valor recuperado</th><th>% do total</th><th>% do cliente</th></tr></thead><tbody>`+
     (rec.length?rec.sort((x,y)=>y.total-x.total).map((t,i)=>{const doCli=soma(ant.filter(x=>x.cd_cliente===t.cd_cliente));
