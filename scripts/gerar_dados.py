@@ -427,6 +427,8 @@ def montar():
     # ---- Sub judice: PDF de cobrança OU marcado "Sim" na planilha (vale para as duas visões e para a semana anterior) ----
     subj = set(cob["subjudice_docs"])
     if P: subj |= {doc(t) for t in P["atual"] + P["anterior"] if t.get("subj_planilha")}
+    if not cfg.get("considerar_subjudice", False):
+        subj = set()                 # decisão: sub judice não é evidenciado; entra normalmente nas faixas de atraso
 
     # ---- Status da cobrança: PDF e Base Posição Clientes; vale o lançamento mais recente ----
     status = dict(cob["status"])

@@ -277,7 +277,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
     <div>
       <section class="card" id="cAging" style="margin-bottom:16px">
         <h2>Aging · migração entre faixas</h2>
-        <p class="sub">Faixa pelo maior atraso do cliente (Dias ajustado). Sub judice fica em linha própria, fora das faixas.</p>
+        <p class="sub">Faixa pelo maior atraso do cliente (Dias ajustado).</p>
         <div class="scroll" style="max-height:none"><table id="tAging" class="cmp"></table></div>
       </section>
       <section class="card" id="cTipo" style="margin-bottom:16px">
@@ -491,7 +491,7 @@ function renderResumo(){
     const dv=pp?(Math.abs(d)<1e-9?"—":(Math.abs(d)*100).toFixed(1).replace(".",",")+" p.p."):(Math.abs(d)<1e-9?"—":f(Math.abs(d)));
     return `<tr><td>${n}</td><td>${f(x)}</td><td>${temAnt?f(y):"—"}</td><td class="${cl}">${temAnt?seta+dv:"—"}</td><td>${temAnt&&!pp&&y?fmtP(d/Math.abs(y)):"—"}</td></tr>`;};
   const cab=`<thead><tr><th class="l">Indicador</th><th>Semana atual<br><small style="font-weight:400">${fmtD(D.data_base)}</small></th><th>Semana anterior<br><small style="font-weight:400">${fmtD(D.data_anterior)}</small></th><th>Variação</th><th>Var. %</th></tr></thead>`;
-  const ord=[ind[0][0],ind[1][0],ind[0][1],ind[1][2],ind[1][1],ind[0][2],ind[0][3],ind[1][3]];
+  const ord=[ind[0][0],ind[1][0],ind[0][1],ind[1][2],ind[1][1],ind[0][2]];
   $("tRes1").innerHTML=cab+"<tbody>"+ord.map(lin).join("")+"</tbody>";
   // frase-resumo
   const ka=new Set(D.titulos.map(t=>t.chave)), kt=new Set(D.tratados.map(t=>t.chave)), rec=b.filter(t=>!ka.has(t.chave)&&!kt.has(t.chave));
@@ -501,7 +501,7 @@ function renderResumo(){
   $("resTxt").innerHTML=`Saldo inadimplente de <b>${mil(sa)}</b> em ${fmtD(D.data_base)}`+
     (temAnt?`, <span class="${d>0?"up":"down"}">${d>0?"▲ alta":"▼ queda"} de ${mil(Math.abs(d))} (${fmtP(sb?Math.abs(d)/sb:null)})</span> sobre ${fmtD(D.data_anterior)}`:"")+
     `. São <b>${I(a.length)} títulos</b> de <b>${I(clientes(a))} clientes</b>; <b>${fmtP(sa?n90/sa:null)}</b> do saldo está acima de 90 dias`+
-    (sj.length?` e ${mil(soma(sj))} está sub judice`:"")+`. `+
+    `. `+
     (temAnt?`Recuperado na semana: <b>${mil(soma(rec))}</b> (${rec.length} título${rec.length===1?"":"s"}). `:"")+
     (espAc?`Inadimplência acumulada de <b>${fmtP(salAc/espAc)}</b> sobre o recebimento esperado até ${mesC(MESREF)}.`:"");
 }
@@ -598,7 +598,6 @@ const FAIXAS=[["0–30 dias",t=>t.dias_aj<=30],["31–60 dias",t=>t.dias_aj>30&&
 function renderAging(){
   const a=AT(), b=AN();
   const lin=FAIXAS.map(([n,f])=>({n,a:a.filter(t=>!t.subjudice&&f(t)),b:b.filter(t=>!t.subjudice&&f(t))}));
-  lin.push({n:"Sub judice",a:a.filter(t=>t.subjudice),b:b.filter(t=>t.subjudice)});
   const r=(n,x,y,c="")=>`<tr class="${c}"><td>${n}</td><td>${fmtN(soma(x))}</td><td>${fmtN(soma(y))}</td>${dV(soma(x),soma(y))}<td>${x.length}</td><td>${y.length}</td></tr>`;
   $("tAging").innerHTML=`<thead><tr><th>Faixa</th><th>Atual</th><th>Anterior</th><th>Δ</th><th>Qtd at.</th><th>Qtd ant.</th></tr></thead><tbody>${lin.map(l=>r(l.n,l.a,l.b)).join("")}${r("Total",a,b,"tot")}</tbody>`;
 }
