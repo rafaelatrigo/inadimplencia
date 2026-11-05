@@ -495,14 +495,31 @@ function renderResumo(){
     const dv=pp?(Math.abs(d)<1e-9?"—":(Math.abs(d)*100).toFixed(1).replace(".",",")+" p.p."):(Math.abs(d)<1e-9?"—":f(Math.abs(d)));
     return `<tr><td>${n}</td><td>${f(x)}</td><td>${temAnt?f(y):"—"}</td><td class="${cl}">${temAnt?seta+dv:"—"}</td><td>${temAnt&&!pp&&y?fmtP(d/Math.abs(y)):"—"}</td></tr>`;};
   const cab=`<thead><tr><th class="l">Indicador</th><th>Semana atual<br><small style="font-weight:400">${fmtD(D.data_base)}</small></th><th>Semana anterior<br><small style="font-weight:400">${fmtD(D.data_anterior)}</small></th><th>Variação</th><th>Var. %</th></tr></thead>`;
-  const ord=[ind[0][0],ind[1][0],ind[0][1],ind[1][2],ind[1][1],ind[0][2]];
-  $("tRes1").innerHTML=cab+"<tbody>"+ord.map(lin).join("")+"</tbody>";
+  // em tratamento (tratados vencidos): inadimplência total = em cobrança + em tratamento
+  const ET=D.em_tratamento||{}, agrega=r=>{ if(!r) return null; const o={total:0,n:0,status:{}};
+    Object.entries(r.por_empresa||{}).forEach(([e,v])=>{ if(!st.emps.includes(e)) return; o.total+=v.total; o.n+=v.n;
+      Object.entries(v.status).forEach(([k,x])=>{o.status[k]=(o.status[k]||0)+x.total;}); }); return o; };
+  const ta=agrega(ET.atual)||{total:0,n:0,status:{}}, tb=agrega(ET.anterior), temTb=!!tb;
+  const lin2=(n,x,y,f,pp,cls="")=>lin([n,x,temTb?y:NaN,f,pp]).replace("<tr>",`<tr class="${cls}">`).replace(/<td>NaN<\/td>|<td>R\$ NaN<\/td>/,"<td>—</td>");
+  const linT=(n,x,y,f,pp,cls)=>temTb?lin2(n,x,y,f,pp,cls):`<tr class="${cls||""}"><td>${n}</td><td>${f(x)}</td><td>—</td><td>—</td><td>—</td></tr>`;
+  const ord=[ind[1][0],ind[0][1],ind[1][2],ind[1][1],ind[0][2]];
+  $("tRes1").innerHTML=cab+"<tbody>"+
+    linT("Inadimplência total (com tratados)",sa+ta.total,sb+(tb?tb.total:0),R,false,"key")+
+    linT("Em tratamento",ta.total,tb?tb.total:0,R)+
+    linT("% em tratamento",(sa+ta.total)?ta.total/(sa+ta.total):0,tb&&(sb+tb.total)?tb.total/(sb+tb.total):0,P,true)+
+    lin(["Inadimplência em cobrança",sa,sb,R]).replace("<tr>",'<tr class="sub">')+
+    ord.map(lin).join("")+"</tbody>";
   // frase-resumo
   const ka=new Set(D.titulos.map(t=>t.chave)), kt=new Set(D.tratados.map(t=>t.chave)), rec=b.filter(t=>!ka.has(t.chave)&&!kt.has(t.chave));
   const pct=st.emps.map(linhaPct).filter(Boolean), espAc=pct.reduce((x,l)=>x+l.espAc,0), salAc=pct.reduce((x,l)=>x+l.saldoAc,0);
   const d=sa-sb, mil=v=>"R$ "+fmtMil(v)+" mil";
   $("resTit").textContent=`Resumo da semana · ${rotFiltro()}`;
-  $("resTxt").innerHTML=`Saldo inadimplente de <b>${mil(sa)}</b> em ${fmtD(D.data_base)}`+
+  const tot=sa+ta.total, totb=tb?sb+tb.total:null, dt=totb!=null?tot-totb:0, ordem=["Distrato","Pagamento em Trânsito","Renegociação","Outros","Sem status"];
+  const partes=ordem.filter(k=>ta.status[k]).map(k=>`${k.toLowerCase()} ${mil(ta.status[k])}`);
+  $("resTxt").innerHTML=`Inadimplência total de <b>${mil(tot)}</b> em ${fmtD(D.data_base)}`+
+    (totb!=null?` (<span class="${dt>0?"up":"down"}">${dt>0?"▲":"▼"} ${mil(Math.abs(dt))} sobre ${fmtD(D.data_anterior)}</span>)`:"")+
+    `, dos quais <b>${mil(ta.total)}</b> (${fmtP(tot?ta.total/tot:null)}) já estão em tratamento`+(partes.length?`: ${partes.join(", ")}`:"")+`. `+
+    `Em cobrança: <b>${mil(sa)}</b>`+
     (temAnt?`, <span class="${d>0?"up":"down"}">${d>0?"▲ alta":"▼ queda"} de ${mil(Math.abs(d))} (${fmtP(sb?Math.abs(d)/sb:null)})</span> sobre ${fmtD(D.data_anterior)}`:"")+
     `. São <b>${I(a.length)} títulos</b> de <b>${I(clientes(a))} clientes</b>; <b>${fmtP(sa?n90/sa:null)}</b> do saldo está acima de 90 dias`+
     `. `+

@@ -257,8 +257,8 @@ def achar_planilha():
         return None
     datados.sort(key=lambda x: (x[0], x[1]))
     d, _, f = datados[-1]                       # a data do nome do arquivo manda; empate = a salva por último
-    anteriores = sorted({x[0] for x in datados if x[0] < d})
-    return f, d, (anteriores[-1] if anteriores else None)
+    ant = [x for x in datados if x[0] < d]
+    return f, d, (ant[-1][0] if ant else None), (ant[-1][2] if ant else None)
 
 
 def _f(v):
@@ -393,6 +393,42 @@ def desambiguar(lst):
     return lst
 
 
+def tratados_da_planilha(f):
+    """Só a aba Tratados de uma planilha (usada para a semana anterior). Lê de uma cópia temporária."""
+    import openpyxl, warnings, shutil, tempfile
+    try:
+        tmp = pathlib.Path(tempfile.gettempdir()) / "inad_tratados_ant.xlsx"
+        shutil.copyfile(f, tmp)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            wb = openpyxl.load_workbook(tmp, data_only=True, read_only=True)
+        ws = next((w for w in wb.worksheets if "tratados" in w.title.lower()), None)
+        out = []
+        for r in (ws.iter_rows(min_row=2, values_only=True) if ws else []):
+            if r and r[0] and len(r) > 24 and r[3]:
+                out.append(dict(_titulo(r), status=str(r[27]).strip() if len(r) > 27 and r[27] else ""))
+        wb.close()
+        return out
+    except Exception as e:
+        avisos.append(f"Não consegui ler os Tratados de {f.name}: {e}")
+        return None
+
+
+def resumo_tratamento(lista, data):
+    """Tratados vencidos até a data: total, quantidade, por status e por empresa (para o 'em tratamento' do resumo)."""
+    por_emp = {}
+    for t in lista:
+        if not t.get("venc") or t["venc"] > data: continue
+        e = por_emp.setdefault(t["empresa"], {"total": 0.0, "n": 0, "status": {}})
+        st = t.get("status") or "Sem status"
+        e["total"] += t["total"]; e["n"] += 1
+        x = e["status"].setdefault(st, {"total": 0.0, "n": 0}); x["total"] += t["total"]; x["n"] += 1
+    for e in por_emp.values():
+        e["total"] = round(e["total"], 2)
+        for x in e["status"].values(): x["total"] = round(x["total"], 2)
+    return {"data": data, "por_empresa": por_emp}
+
+
 def sem_ignorados(lst):
     """Títulos em config.json > ignorar_titulos saem de tudo (base, semana anterior, Tratados), como se nunca tivessem existido."""
     ign = {chave(x["documento"], p) for x in cfg.get("ignorar_titulos", []) for p in x.get("parcelas", [])}
@@ -467,7 +503,7 @@ def montar():
 
     # ---- visão planilha: abas Base Atual e Base Anterior da planilha mais recente ----
     if P:
-        f_plan, d_plan, d_ant = plan
+        f_plan, d_plan, d_ant, _ = plan
         base = [dict(t, subjudice=doc(t) in subj) for t in P["atual"] if t["chave"] not in k_painel]
         ant_t = [dict(t, subjudice=doc(t) in subj) for t in P["anterior"]]
         dias_ajustado(base); dias_ajustado(ant_t)
@@ -482,6 +518,22 @@ def montar():
     caixa = {x["status"]: x["caixa"] for x in cfg["status_tratados"]}
     trat_out = [dict(t, caixa=caixa.get(t.get("status") or "", "Sem status"), no_sienge=(t["chave"] in no_sienge) if sienge else True)
                 for t in tratados]
+
+    # ---- em tratamento (inadimplência total = base + tratados vencidos), semana atual e anterior ----
+    hist_trat = ler_json(DADOS / "tratamento_semanal.json", {})
+    v0b = visoes["sienge" if "sienge" in visoes else "planilha"]
+    trat_atual = resumo_tratamento(trat_out, v0b["data_base"])
+    hist_trat[v0b["data_base"]] = trat_atual
+    trat_ant = None
+    if v0b["data_anterior"]:
+        if plan and plan[3] and plan[2] and plan[2].isoformat() == v0b["data_anterior"]:
+            lt = tratados_da_planilha(plan[3])
+            if lt is not None:
+                trat_ant = resumo_tratamento(desambiguar(sem_ignorados(lt)), v0b["data_anterior"])
+        if trat_ant is None:
+            trat_ant = hist_trat.get(v0b["data_anterior"])
+        if trat_ant: hist_trat[v0b["data_anterior"]] = trat_ant
+    gravar_json(DADOS / "tratamento_semanal.json", hist_trat)
 
     todos = [t for v in visoes.values() for t in v["titulos"] + v["anterior"]]
     emps_cfg = cfg["empreendimentos"]
@@ -503,6 +555,7 @@ def montar():
         "esperado": esperado_por_mes(),
         "fechamentos": ler_json(DADOS / "fechamentos.json", []),
         "fora_regra": fora_regra,
+        "em_tratamento": {"atual": trat_atual, "anterior": trat_ant},
         "fontes": {"contas_receber": v0["fonte"], "cobranca": f_cob.name if f_cob else None},
         "avisos": avisos,
     }
