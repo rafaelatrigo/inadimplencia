@@ -1,0 +1,29 @@
+{
+  "pasta_entrada": "entrada",
+  "padrao_contas_receber": "*.csv",
+  "padrao_cobranca": "*.pdf",
+  "pasta_boletagem": "entrada/boletagem",
+  "padrao_boletagem": "*.pdf",
+  "pasta_dados": "dados",
+  "regra_dias": 10,
+  "empreendimentos": [
+    {"nome": "Terrazza Balena", "empresa": "TERRAZZA BALENA SPE LTDA"},
+    {"nome": "Ícone (Feira)", "empresa": "TERRAZZA FEIRA SPE LTDA"},
+    {"nome": "Carozzo Wellness", "empresa": "CAROZZO WELLNESS JARDIM ARMAÇÃO LTDA"}
+  ],
+  "esperado_excluir_clientes": [
+    {"empresa": "TERRAZZA FEIRA SPE LTDA", "codigo_cliente": 776, "obs": "JDL Holding Patrimonial Ltda - não entra no recebimento esperado do Feira"}
+  ],
+  "status_tratados": [
+    {"status": "Distrato", "caixa": "Distrato"},
+    {"status": "Pagamento em Trânsito", "caixa": "Aguardando compensação"},
+    {"status": "Renegociação", "caixa": "Aguardando compensação"},
+    {"status": "Outros", "caixa": "Aguardando compensação"}
+  ],
+  "servico_local": {
+    "porta": 8733,
+    "origens": ["https://rafaelatrigo.github.io"],
+    "intervalo_segundos": 60,
+    "estabilizar_segundos": 60
+  }
+}

@@ -1,0 +1,17 @@
+# relatórios e dados com nomes de clientes: NUNCA vão para o GitHub
+entrada/
+dados/
+*.xlsx
+*.xlsm
+*.xls
+*.csv
+*.pdf
+~$*
+scripts/senha*.txt
+__pycache__/
+.DS_Store
+atualizacao.log
+servico.log
+site/data/*.json
+!site/data/painel.enc.json
+!site/data/versao.json

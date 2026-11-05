@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Acompanhamento de inadimplência</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f3f3f0; --surface:#ffffff; --surface-2:#f0efea; --line:#dedcd5;
+  --text:#1c1c1a; --text-2:#55534d; --muted:#83807a;
+  --brand:#04452f; --brand-2:#e3ece6; --brand-ink:#ffffff; --cobre:#9c6c4f;
+  --s1:#04452f; --s2:#6f9a7c; --s3:#c3d4c6; --s4:#5f5b54; --s5:#a8a296; --s6:#e2ddd2; --s7:#9c6c4f; --s8:#c0a163; --s9:#2f5d66; --sx:#7c8b93;
+  --good:#3f8f3f; --warn:#c99a2e; --crit:#b8473f;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --line:#34332f;
+    --text:#f0efec; --text-2:#c6c4bb; --muted:#97958d;
+    --brand:#3f8f68; --brand-2:#1d2e25; --brand-ink:#0d1712; --cobre:#c08566;
+    --s1:#3f8f68; --s2:#8fb89a; --s3:#d9e6dc; --s4:#8a857c; --s5:#bdb7aa; --s6:#f0ebe0; --s7:#b07658; --s8:#e3c891; --s9:#6aa3ad; --sx:#9aa7ae;
+    --good:#6fbf6f; --warn:#e0b84f; --crit:#e07a70;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --line:#34332f;
+  --text:#f0efec; --text-2:#c6c4bb; --muted:#97958d;
+  --brand:#3f8f68; --brand-2:#1d2e25; --brand-ink:#0d1712; --cobre:#c08566;
+  --s1:#3f8f68; --s2:#8fb89a; --s3:#d9e6dc; --s4:#8a857c; --s5:#bdb7aa; --s6:#f0ebe0; --s7:#b07658; --s8:#e3c891; --s9:#6aa3ad; --sx:#9aa7ae;
+  --good:#6fbf6f; --warn:#e0b84f; --crit:#e07a70;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--surface);border-bottom:3px solid var(--brand)}
+.top{max-width:1360px;margin:0 auto;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;justify-content:space-between}
+.brandbox{display:flex;align-items:center;gap:14px;min-width:0}
+.logo{height:42px;width:auto;display:block}
+.logo-txt{font-weight:800;letter-spacing:.18em;color:var(--cobre);font-size:18px;display:none}
+h1{margin:0;font-size:20px;font-weight:650;color:var(--text)}
+.brandbox p{margin:0;color:var(--text-2);font-size:12px}
+.acoes{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.stamp{font-size:12px;color:var(--text-2);text-align:right}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.btn.prim{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn:focus-visible,.fbtn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.layout{max-width:1360px;margin:0 auto;padding:18px 16px 40px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
+aside{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+aside::-webkit-scrollbar{width:8px} aside::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px} aside::-webkit-scrollbar-track{background:transparent}
+.menu-tit{margin:0 0 8px;font-size:13px;font-weight:800;letter-spacing:.14em;color:var(--brand)}
+aside h3{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
+.fsec{margin-bottom:16px}.fsec:last-child{margin-bottom:0}
+.fgrid{display:flex;flex-direction:column;gap:5px}
+.fbtn{display:flex;width:100%;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;font:inherit;font-size:12.5px;cursor:pointer;line-height:1.3;text-align:left}
+.fbtn:hover{border-color:var(--brand)}
+.fbtn[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.fbtn[aria-pressed="true"] .sw{border-color:rgba(255,255,255,.7)}
+.fbtn.todos{font-weight:600}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;border:1px solid rgba(0,0,0,.12)}
+.perfil{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--brand-2);color:var(--brand);font-weight:600;margin-bottom:12px}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:9px 11px;min-width:0}
+.tile .k{font-size:11px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .v{font-size:clamp(15px,1.35vw,19px);font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tile .v small{font-size:11px;font-weight:500;color:var(--muted);margin-left:3px}
+.tile .s{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:1180px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.alerta{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 7px;font-weight:600}
+.alerta.warn{background:#fbf0d4;color:#7a5200}
+.alerta.crit{background:#f8dedb;color:#a1352d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .alerta.warn{background:#3a2f12;color:#f0c75e} :root:not([data-theme="light"]) .alerta.crit{background:#3d1d1a;color:#f19a90}}
+:root[data-theme="dark"] .alerta.warn{background:#3a2f12;color:#f0c75e} :root[data-theme="dark"] .alerta.crit{background:#3d1d1a;color:#f19a90}
+.meter{height:4px;background:var(--surface-2);border-radius:3px;margin-top:5px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--brand);border-radius:3px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:16px}
+.card .sub{margin:0 0 12px;color:var(--text-2);font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--text-2);margin-bottom:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .lg{cursor:pointer;border-radius:4px;padding:1px 3px}.legend .lg:hover{background:var(--surface-2)}
+.sw.out{background:transparent!important;border:2px dashed var(--text-2)}
+.sw.light{opacity:.45}
+#chart{width:100%;position:relative}
+#chart svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.14);min-width:190px;display:none;z-index:2}
+.tip b{display:block;margin-bottom:4px}
+.tip .r{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+.tip .r i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:12px;color:var(--text-2);font-weight:600;background:var(--surface-2);position:sticky;top:0;z-index:1}
+th:first-child,td:first-child,th.l,td.l{text-align:left}
+tr.tot td{font-weight:650;border-top:2px solid var(--line)}
+tr.sub td{font-weight:650;background:var(--surface-2)}
+tr.key td{font-weight:700;background:var(--brand-2)}
+td.ind{padding-left:26px;color:var(--text-2)}
+.scroll{overflow:auto;max-height:540px;border:1px solid var(--line);border-radius:8px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--text)}
+.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.badge.c::before{background:var(--good)} .badge.n::before{background:var(--warn)} .badge.p::before{background:var(--brand)}
+.neg{color:var(--crit);font-weight:600}
+.neg::before{content:"▼ ";font-size:10px}
+.thf{display:inline-flex;align-items:center;gap:6px}
+.fbt{border:1px solid transparent;background:transparent;color:var(--muted);border-radius:4px;padding:0 4px;font-size:11px;line-height:16px;cursor:pointer}
+.fbt:hover{border-color:var(--line);color:var(--text)}
+.fbt.on{background:var(--brand);color:var(--brand-ink)}
+.xpop{position:absolute;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);width:270px;padding:10px;font-size:13px;text-align:left}
+.xpop .ord{display:flex;gap:6px;margin-bottom:8px}
+.xpop .ord button,.xpop .rod button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:6px;padding:5px;font:inherit;font-size:12px;cursor:pointer}
+.xpop .ord button.on{background:var(--brand-2);border-color:var(--brand)}
+.xpop input[type=search],.xpop input[type=number]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit;font-size:12px;margin-bottom:6px}
+.xpop .lst{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:4px 6px;margin-bottom:8px}
+.xpop label{display:flex;gap:6px;align-items:flex-start;padding:2px 0;cursor:pointer;font-size:12px;white-space:normal}
+.xpop label span.n{margin-left:auto;color:var(--muted)}
+.xpop input[type=checkbox]{accent-color:var(--brand);margin-top:2px}
+.xpop .rod{display:flex;gap:6px}
+.xpop .rod button.ok{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.limpar{border:0;background:none;color:var(--brand);text-decoration:underline;cursor:pointer;font:inherit;font-size:12px;padding:0;margin-left:10px}
+.search{width:100%;max-width:320px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;margin-bottom:10px}
+.foot{color:var(--muted);font-size:12px;margin-top:8px}
+.toast{position:fixed;right:16px;bottom:16px;background:var(--text);color:var(--surface);padding:10px 14px;border-radius:8px;font-size:13px;display:none;z-index:9}
+.lock{max-width:380px;margin:48px auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.lock h2{margin:0 0 6px;font-size:18px}.lock p{margin:0 0 16px;color:var(--text-2);font-size:13px}
+.lock label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px}
+.lock input[type=password]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+.lock .lem{display:flex;gap:8px;align-items:center;margin:12px 0 16px;font-size:13px;color:var(--text-2)}
+.lock button{width:100%;padding:10px}
+.lock .msg{min-height:18px;margin-top:10px;font-size:13px;color:var(--crit)}
+.hidden{display:none!important}
+details.fbox>summary{display:none}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  aside{position:static;padding:0;border:0;background:transparent;max-height:none;overflow:visible}
+  details.fbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
+  details.fbox>summary{display:block;cursor:pointer;font-weight:600}
+  details.fbox[open]>summary{margin-bottom:10px}
+  .stamp{text-align:left}
+}
+.delta{font-size:11px;margin-top:2px;white-space:nowrap}
+.up{color:var(--crit)} .down{color:var(--good)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.sel{padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}
+.av{border-left:3px solid var(--warn);background:var(--surface-2);padding:8px 12px;border-radius:6px;font-size:13px;margin:6px 0}
+.av.crit{border-left-color:var(--crit)}
+td.wrap{white-space:normal;min-width:240px;max-width:420px;text-align:left;font-size:12.5px;color:var(--text-2)}
+.edit{display:none}
+body.editor .edit{display:revert}
+body.editor .edit.flex{display:flex}
+.barra{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--text-2);white-space:nowrap}
+.tag.sj{background:#f8dedb;color:#a1352d}
+.tag.ok{background:var(--brand-2);color:var(--brand)}
+.tag.am{background:#fbf0d4;color:#7a5200}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:1100px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.grid2 .card{margin-bottom:0}
+.sec{margin-bottom:16px}
+.pct{font-weight:650}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:30}
+#modal .box{background:var(--surface);border-radius:var(--radius);padding:18px;width:min(460px,92vw);border:1px solid var(--line)}
+#modal h3{margin:0 0 6px;font-size:16px} #modal p{margin:0 0 12px;color:var(--text-2);font-size:13px}
+#modal label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin:8px 0 4px}
+#modal select,#modal input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+#modal .rod{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+input.ck{accent-color:var(--brand)}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{color:var(--text);text-decoration:none;font-size:12.5px;padding:4px 8px;border-radius:6px}
+.nav a:hover{background:var(--surface-2)}
+td.cl{white-space:normal;min-width:190px;text-align:left}
+.mini{display:block;font-size:11.5px;color:var(--muted);margin-top:1px}
+table.cmp th,table.cmp td{padding:6px 8px}
+table.cmp td.wrap{min-width:220px;max-width:340px}
+</style>
+</head>
+<body>
+<header><div class="top">
+  <div class="brandbox">
+    <img class="logo" id="logo" src="logo.png" alt="Carozzo" onerror="this.style.display='none';document.getElementById('logoTxt').style.display='block'">
+    <span class="logo-txt" id="logoTxt">CAROZZO</span>
+    <div><h1>Acompanhamento de inadimplência</h1><p>Evolução semanal, % sobre o recebimento esperado e recuperação de crédito · uso interno</p></div>
+  </div>
+  <div class="acoes hidden" id="acoes">
+    <div class="stamp" id="stamp"></div>
+    <span class="tag ok hidden" id="modoEd" title="O serviço local está rodando neste computador: você pode classificar Tratados e registrar fechamentos">modo edição</span>
+    <button class="btn prim hidden" id="publicar" type="button" title="Gera os dados a partir dos relatórios do Sienge e publica (só neste computador)">Publicar agora</button>
+    <button class="btn" id="atualizar" type="button" title="Busca a última versão publicada dos dados">Atualizar</button>
+    <button class="btn" id="sair" type="button">Sair</button>
+  </div>
+</div></header>
+
+<form class="lock" id="lock" autocomplete="off">
+  <h2>Acesso restrito</h2>
+  <p>Painel interno do Grupo Carozzo. Digite a senha de acesso.</p>
+  <label for="senha">Senha</label>
+  <input type="password" id="senha" required autofocus>
+  <div class="lem"><input type="checkbox" id="lembrar"><label for="lembrar" style="margin:0;font-weight:400">Lembrar nesta aba até fechar o navegador</label></div>
+  <button class="btn prim" type="submit" id="entrar">Entrar</button>
+  <div class="msg" id="msg" role="alert"></div>
+</form>
+
+<div class="layout hidden" id="painel">
+  <aside>
+    <details class="fbox" id="fbox" open>
+      <summary>Filtros</summary>
+      <div class="menu-tit">FILTROS</div>
+      <p style="margin:0 0 12px;font-size:12px;color:var(--muted)" id="dica">Clique para filtrar. Segure <b>Ctrl</b> e clique para selecionar mais de um.</p>
+      <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
+      <div class="fsec"><h3>Ir para</h3><nav class="nav">
+        <a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a><a href="#cEmp">Por empreendimento</a>
+        <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Top 10 clientes</a>
+        <a href="#cRec">Recuperação de crédito</a><a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a><a href="#cAv">Avisos</a></nav></div>
+    </details>
+  </aside>
+  <main>
+    <section class="tiles" id="tiles"></section>
+
+    <section class="card" id="cPct">
+      <h2>% Inadimplência sobre recebimentos esperados</h2>
+      <p class="sub" id="pctSub"></p>
+      <div class="barra"><label for="mesRef" style="font-size:13px;color:var(--text-2)">Mês de referência</label><select class="sel" id="mesRef"></select>
+        <button class="btn prim edit" id="btnFech" type="button">Registrar fechamento</button><span class="foot" id="fechInfo" style="margin:0"></span></div>
+      <div class="scroll" style="max-height:none"><table id="tPct"></table></div>
+      <div id="pctAv"></div>
+      <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600;font-size:13px">Recebimento esperado mês a mês (relatórios enviados ao BPO)</summary>
+        <div class="scroll" style="margin-top:8px"><table id="tEsp"></table></div></details>
+      <details style="margin-top:8px" id="fechBox"><summary style="cursor:pointer;font-weight:600;font-size:13px">Fechamentos registrados (enviados à Rita)</summary>
+        <div class="scroll" style="margin-top:8px"><table id="tFech"></table></div></details>
+    </section>
+
+    <section class="card" id="cSem">
+      <h2>Evolução semanal do saldo inadimplente</h2>
+      <p class="sub">R$ mil · um ponto por relatório semanal · passe o mouse para ver os valores</p>
+      <div class="legend" id="legSem"></div>
+      <div id="chart"><div class="tip" id="tip"></div></div>
+    </section>
+
+    <section class="card" id="cEmp">
+      <h2>Concentração por empreendimento</h2>
+      <p class="sub" id="empSub"></p>
+      <div class="scroll" style="max-height:none"><table id="tEmp"></table></div>
+    </section>
+
+    <div class="grid2 sec" style="grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)">
+      <section class="card" id="cAging">
+        <h2>Aging · migração entre faixas</h2>
+        <p class="sub">Faixa pelo maior atraso do cliente (Dias ajustado). Sub judice fica em linha própria, fora das faixas.</p>
+        <div class="scroll" style="max-height:none"><table id="tAging" class="cmp"></table></div>
+      </section>
+      <section class="card" id="cTipo">
+        <h2>Tipo de título</h2>
+        <p class="sub">Atual × semana anterior</p>
+        <div class="scroll" style="max-height:none"><table id="tTipo" class="cmp"></table></div>
+      </section>
+    </div>
+
+    <section class="card" id="cTop">
+      <h2>Top 10 clientes inadimplentes</h2>
+      <p class="sub">Atual × semana anterior · último status do relatório de Títulos em Cobrança</p>
+      <div class="scroll" style="max-height:none"><table id="tTop" class="cmp"></table></div>
+    </section>
+
+    <section class="card" id="cRec">
+      <h2>Recuperação de crédito · comparativo semanal</h2>
+      <p class="sub" id="recSub"></p>
+      <section class="tiles" id="recTiles" style="margin-bottom:12px"></section>
+      <div class="scroll"><table id="tRec" class="cmp"></table></div>
+    </section>
+
+    <section class="card" id="cBase">
+      <h2>Títulos inadimplentes</h2>
+      <p class="sub" id="baseSub"></p>
+      <div class="barra">
+        <input class="search" id="q" type="search" placeholder="Buscar cliente, documento ou unidade" aria-label="Buscar títulos" style="margin:0">
+        <button class="btn prim edit" id="btnTratar" type="button" disabled>Tratar selecionados</button>
+        <span class="foot edit" id="nSel" style="margin:0"></span>
+      </div>
+      <div class="scroll"><table id="tBase" class="cmp"></table></div>
+      <p class="foot" id="baseFoot"></p>
+    </section>
+
+    <section class="card" id="cTrat">
+      <h2>Tratados</h2>
+      <p class="sub" id="tratSub"></p>
+      <div class="barra"><input class="search" id="qt" type="search" placeholder="Buscar cliente ou documento" aria-label="Buscar tratados" style="margin:0">
+        <select class="sel" id="fStatus" aria-label="Filtrar por status"></select></div>
+      <div class="scroll"><table id="tTrat" class="cmp"></table></div>
+    </section>
+
+    <section class="card" id="cAv">
+      <h2>Avisos e conferências</h2>
+      <div id="avisos"></div>
+    </section>
+    <p class="foot" id="fontes"></p>
+  </main>
+</div>
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="mTit"><div class="box">
+  <h3 id="mTit">Tratar títulos</h3><p id="mTxt"></p>
+  <label for="mStatus">Status de saída</label><select id="mStatus"></select>
+  <label for="mObs">Observação</label><input id="mObs" type="text" maxlength="200" placeholder="Opcional">
+  <div class="rod"><button class="btn" type="button" id="mCancel">Cancelar</button><button class="btn prim" type="button" id="mOk">Salvar e publicar</button></div>
+</div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const MESES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const MESES_L=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const TIPOS={PM:"Parcela mensal",PS:"Parcela semestral",PI:"Parcela inicial / sinal",CH:"Chave",AT:"Aporte de capital"};
+const fmtR=v=>(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const fmtN=v=>(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtMil=v=>((v||0)/1000).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const fmtP=v=>v==null||!isFinite(v)?"—":(v*100).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})+"%";
+const fmtD=s=>{if(!s)return"—";const[y,m,d]=s.slice(0,10).split("-");return `${d}/${m}/${y}`};
+const mesC=m=>{const[y,mm]=m.split("-");return MESES[+mm-1]+"/"+y.slice(2)};
+const mesL=m=>{const[y,mm]=m.split("-");return MESES_L[+mm-1]+"/"+y};
+const addMes=(m,n)=>{let[y,mm]=m.split("-").map(Number);mm+=n;while(mm>12){mm-=12;y++}while(mm<1){mm+=12;y--}return `${y}-${String(mm).padStart(2,"0")}`};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $=id=>document.getElementById(id);
+const soma=(a,f=t=>t.total)=>a.reduce((s,t)=>s+f(t),0);
+let D=null, SENHA=null, EDITOR=false, st={emps:null}, MESREF=null, SEL=new Set();
+try{const s=JSON.parse(localStorage.getItem("inad-filtros")||"null"); if(s) st=s;}catch(e){}
+
+/* ---------- acesso e dados (mesma criptografia do painel de despesas: PBKDF2 + AES-GCM) ---------- */
+const b64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+async function decifrar(p,senha){
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(senha),"PBKDF2",false,["deriveKey"]);
+  const k=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b64(p.salt),iterations:p.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64(p.iv)},k,b64(p.dados))));
+}
+async function carregar(senha){
+  const r=await fetch(`data/painel.enc.json?t=${Date.now()}`,{cache:"no-store"});
+  if(!r.ok) throw new Error("Arquivo de dados não encontrado. Rode o atualizar_painel.bat.");
+  try{return await decifrar(await r.json(),senha);}catch(e){ if(e.name==="OperationError") throw new Error("Senha incorreta."); throw e; }
+}
+const lock=$("lock"), painel=$("painel"), msg=$("msg"), btn=$("entrar");
+async function entrar(senha,lembrar){
+  btn.disabled=true; msg.textContent=""; btn.textContent="Abrindo...";
+  try{ D=await carregar(senha); SENHA=senha;
+    if(lembrar){try{sessionStorage.setItem("inad-senha",senha)}catch(e){}}
+    lock.classList.add("hidden"); painel.classList.remove("hidden"); $("acoes").classList.remove("hidden"); init(); detectarServico();
+  }catch(e){ msg.textContent=e.message; try{sessionStorage.removeItem("inad-senha")}catch(_){} }
+  finally{btn.disabled=false; btn.textContent="Entrar";}
+}
+lock.addEventListener("submit",ev=>{ev.preventDefault();entrar($("senha").value,$("lembrar").checked)});
+$("sair").onclick=()=>{try{sessionStorage.removeItem("inad-senha")}catch(e){} location.reload();};
+$("atualizar").onclick=async()=>{
+  const b=$("atualizar"); b.disabled=true; b.textContent="Atualizando...";
+  try{ const novo=await carregar(SENHA);
+    if(novo.gerado_em===D.gerado_em) toast(`Já está com a versão mais recente (dados de ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}).`);
+    else{ D=novo; init(); toast(`Dados atualizados: gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`); }
+  }catch(e){ toast("Não foi possível atualizar: "+e.message); }
+  finally{ b.disabled=false; b.textContent="Atualizar"; }
+};
+
+/* ---------- serviço local (só no PC onde ele roda): Publicar agora, Tratados e fechamento ---------- */
+const LOCAL="http://127.0.0.1:8733";
+async function local(caminho,metodo="GET",corpo){
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),8000);
+  try{const r=await fetch(LOCAL+caminho,{method:metodo,signal:ctl.signal,cache:"no-store",
+      headers:corpo?{"Content-Type":"application/json"}:undefined,body:corpo?JSON.stringify(corpo):undefined});
+    const j=await r.json(); if(!r.ok&&j.erro) throw new Error(j.erro); return j;}
+  finally{clearTimeout(t);}
+}
+async function detectarServico(){
+  try{const s=await local("/status"); if(s&&s.servico==="painel-inadimplencia"){
+    EDITOR=true; document.body.classList.add("editor"); $("publicar").classList.remove("hidden"); $("modoEd").classList.remove("hidden"); render(); if(s.executando) acompanhar();}}catch(e){}
+}
+const espera=ms=>new Promise(r=>setTimeout(r,ms));
+let acompanhando=false;
+async function acompanhar(){
+  if(acompanhando) return; acompanhando=true;
+  const b=$("publicar"), antes=D.gerado_em; b.disabled=true;
+  const rot={gerando:"Gerando dados...",enviando:"Enviando ao GitHub..."};
+  try{
+    let s; do{ s=await local("/status"); b.textContent=rot[s.etapa]||"Processando..."; if(s.executando) await espera(2500); }while(s.executando);
+    if(s.resultado==="erro"){toast("Erro ao publicar: "+s.mensagem); return;}
+    if(s.resultado==="sem_mudanca"){toast(s.mensagem); return;}
+    b.textContent="Publicando no site...";
+    for(let i=0;i<60;i++){ await espera(5000);
+      try{const v=await (await fetch(`data/versao.json?t=${Date.now()}`,{cache:"no-store"})).json();
+        if(v.gerado_em!==antes){ D=await carregar(SENHA); init(); toast(`Painel atualizado: dados de ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`); return; }}catch(e){}
+    }
+    toast("Enviado ao GitHub, mas o site ainda não publicou. Clique em Atualizar em alguns minutos.");
+  }catch(e){ toast("O serviço local parou de responder: "+e.message); }
+  finally{ acompanhando=false; b.disabled=false; b.textContent="Publicar agora"; }
+}
+$("publicar").onclick=async()=>{
+  try{ const r=await local("/publicar","POST"); if(!r.iniciado&&!r.executando){toast("Não foi possível iniciar."); return;} acompanhar(); }
+  catch(e){ toast("Serviço local não respondeu. Ele está rodando neste computador?"); }
+};
+function toast(t){const el=$("toast");el.textContent=t;el.style.display="block";clearTimeout(el._t);el._t=setTimeout(()=>el.style.display="none",5000);}
+try{const s=sessionStorage.getItem("inad-senha"); if(s) entrar(s,true);}catch(e){}
+if(!window.crypto||!crypto.subtle) msg.textContent="Abra o painel pelo endereço https do GitHub Pages.";
+
+/* ---------- filtros ---------- */
+const EMPS=()=>D.empreendimentos.map(e=>e.empresa);
+const nomeE=emp=>(D.empreendimentos.find(e=>e.empresa===emp)||{nome:emp}).nome;
+const okE=t=>st.emps.includes(t.empresa);
+const TOQUE=window.matchMedia&&matchMedia("(pointer:coarse)").matches;
+function salvar(){try{localStorage.setItem("inad-filtros",JSON.stringify(st))}catch(e){}}
+function listaEmp(){
+  const opcoes=EMPS(), el=$("fEmp"), todos=st.emps.length===opcoes.length; el.className="fgrid";
+  el.innerHTML=`<button type="button" class="fbtn todos" aria-pressed="${todos}">Todos</button>`+
+    opcoes.map((o,i)=>`<button type="button" class="fbtn" aria-pressed="${!todos&&st.emps.includes(o)}"><i class="sw" style="background:var(--s${i+1})"></i>${esc(nomeE(o))}</button>`).join("");
+  el.querySelectorAll("button").forEach((bt,i)=>bt.onclick=ev=>{
+    if(i===0) st.emps=[...opcoes];
+    else{ const o=opcoes[i-1], multi=ev.ctrlKey||ev.metaKey||TOQUE;
+      if(!multi) st.emps=(st.emps.length===1&&st.emps[0]===o)?[...opcoes]:[o];
+      else if(st.emps.length===opcoes.length) st.emps=[o];
+      else if(st.emps.includes(o)) st.emps=st.emps.filter(x=>x!==o);
+      else st.emps=[...st.emps,o];
+      if(!st.emps.length) st.emps=[...opcoes]; st.emps=opcoes.filter(x=>st.emps.includes(x)); }
+    salvar(); listaEmp(); render();});
+}
+const corE=emp=>`var(--s${EMPS().indexOf(emp)+1})`;
+const rotFiltro=()=>st.emps.length===EMPS().length?"todos os empreendimentos":st.emps.map(nomeE).join(", ");
+
+function mesesRef(){
+  const ms=new Set(); Object.values(D.esperado).forEach(o=>Object.keys(o).forEach(m=>ms.add(m)));
+  const lim=D.data_base.slice(0,7); return [...ms].filter(m=>m<=lim).sort();
+}
+function init(){
+  if(!Array.isArray(st.emps)) st.emps=EMPS(); st.emps=EMPS().filter(x=>st.emps.includes(x)); if(!st.emps.length) st.emps=EMPS();
+  const ms=mesesRef(), padrao=addMes(D.data_base.slice(0,7),-1);
+  if(!MESREF||!ms.includes(MESREF)) MESREF=ms.includes(padrao)?padrao:ms[ms.length-1];
+  $("mesRef").innerHTML=ms.map(m=>`<option value="${m}" ${m===MESREF?"selected":""}>${mesL(m)}</option>`).join("");
+  $("mesRef").onchange=e=>{MESREF=e.target.value; renderPct();};
+  $("stamp").innerHTML=`Relatório de ${fmtD(D.data_base)} · anterior ${fmtD(D.data_anterior)}<br>Gerado em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}`;
+  $("fStatus").innerHTML=`<option value="">Todos os status</option>`+D.status_tratados.map(s=>`<option>${esc(s.status)}</option>`).join("")+`<option value="(sem)">Sem status</option>`;
+  $("fStatus").onchange=renderTrat; $("qt").oninput=renderTrat; $("q").oninput=renderBase;
+  $("fontes").textContent=`Fontes: Contas a Receber ${D.fontes.contas_receber}; Títulos em Cobrança ${D.fontes.cobranca||"—"}; recebimento esperado pelos relatórios enviados ao BPO. Regra: entra o cliente com algum título vencido há mais de ${D.regra_dias} dias (com todos os títulos vencidos dele). Dados criptografados.`;
+  if(window.matchMedia("(max-width:900px)").matches) $("fbox").open=false;
+  if(TOQUE) $("dica").textContent="Toque para filtrar. Toque em mais de um para combinar.";
+  SEL.clear(); listaEmp(); render();
+}
+window.addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>D&&renderSem(),120)});
+const AT=()=>D.titulos.filter(okE), AN=()=>D.anterior.filter(okE);
+const statusCli=cd=>(D.cobranca&&D.cobranca.status[cd])||null;
+function render(){renderTiles();renderPct();renderSem();renderEmp();renderAging();renderTipo();renderTop();renderRec();renderBase();renderTrat();renderAvisos();}
+
+/* ---------- quadros ---------- */
+function delta(a,b,fmt,menorMelhor=true){
+  if(b==null) return `<div class="delta" style="color:var(--muted)">sem semana anterior</div>`;
+  const d=a-b; if(Math.abs(d)<0.005) return `<div class="delta" style="color:var(--muted)">= semana anterior</div>`;
+  const ruim=menorMelhor?d>0:d<0;
+  return `<div class="delta ${ruim?"up":"down"}">${d>0?"▲":"▼"} ${fmt(Math.abs(d))} vs ${fmtD(D.data_anterior).slice(0,5)}</div>`;
+}
+const clientes=a=>new Set(a.map(t=>t.cd_cliente)).size;
+const mais90=a=>a.filter(t=>!t.subjudice&&t.dias_aj>90);
+function renderTiles(){
+  const a=AT(), b=AN(), sa=soma(a), sb=soma(b), temAnt=!!D.data_anterior;
+  const ta=a.length?sa/a.length:0, tb=b.length?sb/b.length:0, n90=soma(mais90(a)), n90b=soma(mais90(b));
+  const sj=a.filter(t=>t.subjudice), sjb=b.filter(t=>t.subjudice);
+  const V=v=>`${fmtMil(v)}<small>R$ mil</small>`, M=v=>"R$ "+fmtMil(v)+" mil", I=v=>v.toLocaleString("pt-BR"), P=v=>(v*100).toFixed(1).replace(".",",")+" p.p.";
+  $("tiles").innerHTML=`
+   <div class="tile" title="Soma do Total (com juros, multa e correção) dos títulos na base"><div class="k">Saldo inadimplente</div><div class="v">${V(sa)}</div>${delta(sa,temAnt?sb:null,M)}</div>
+   <div class="tile"><div class="k">Títulos</div><div class="v">${I(a.length)}</div>${delta(a.length,temAnt?b.length:null,I)}</div>
+   <div class="tile"><div class="k">Clientes inadimplentes</div><div class="v">${I(clientes(a))}</div>${delta(clientes(a),temAnt?clientes(b):null,I)}</div>
+   <div class="tile"><div class="k">Ticket médio por título</div><div class="v">${V(ta)}</div>${delta(ta,temAnt?tb:null,M)}</div>
+   <div class="tile" title="Clientes com maior atraso acima de 90 dias, sem os sub judice"><div class="k">Acima de 90 dias</div><div class="v">${V(n90)}</div><div class="delta" style="color:var(--text-2)">${fmtP(sa?n90/sa:null)} do saldo</div>${delta(sa?n90/sa:0,temAnt&&sb?n90b/sb:null,P)}</div>
+   <div class="tile" title="Situação Sub judice no relatório de Títulos em Cobrança"><div class="k">Sub judice</div><div class="v">${V(soma(sj))}</div><div class="delta" style="color:var(--text-2)">${clientes(sj)} cliente(s) · ${sj.length} títulos</div>${delta(soma(sj),temAnt?soma(sjb):null,M)}</div>`;
+}
+
+/* ---------- % inadimplência ---------- */
+function linhaPct(emp){
+  const esp=D.esperado[emp]||{}, tit=D.titulos.filter(t=>t.empresa===emp);
+  if(!tit.length&&!Object.keys(esp).length) return null;
+  const ini=tit.length?tit.map(t=>t.venc.slice(0,7)).sort()[0]:MESREF, ant=addMes(MESREF,-1);
+  const meses=[]; for(let m=ini;m<=MESREF;m=addMes(m,1)) meses.push(m);
+  const faltam=meses.filter(m=>esp[m]==null);
+  const espAc=meses.reduce((s,m)=>s+(esp[m]?esp[m].valor:0),0);
+  const venc=m=>soma(tit.filter(t=>t.venc.slice(0,7)===m));
+  return {emp,nome:nomeE(emp),ini,fim:MESREF,faltam,espAc,saldoAc:soma(tit),
+    espMes:esp[MESREF]?esp[MESREF].valor:null,saldoMes:venc(MESREF),espAnt:esp[ant]?esp[ant].valor:null,saldoAnt:venc(ant),
+    qtd:tit.length,unid:new Set(tit.map(t=>t.unid)).size};
+}
+function renderPct(){
+  const ant=addMes(MESREF,-1);
+  const L=st.emps.map(linhaPct).filter(Boolean);
+  const T=L.reduce((t,l)=>({espAc:t.espAc+l.espAc,saldoAc:t.saldoAc+l.saldoAc,espMes:t.espMes+(l.espMes||0),saldoMes:t.saldoMes+l.saldoMes,
+    espAnt:t.espAnt+(l.espAnt||0),saldoAnt:t.saldoAnt+l.saldoAnt,qtd:t.qtd+l.qtd,unid:t.unid+l.unid}),{espAc:0,saldoAc:0,espMes:0,saldoMes:0,espAnt:0,saldoAnt:0,qtd:0,unid:0});
+  $("pctSub").innerHTML=`Acumulado: do mês do título vencido mais antigo de cada empreendimento até <b>${mesL(MESREF)}</b>. Saldo acumulado = saldo inadimplente total da base de ${fmtD(D.data_base)}. Mês: títulos vencidos no mês ÷ recebimento esperado do mês.`;
+  const r=(l,cls="")=>`<tr class="${cls}"><td>${esc(l.nome)}</td><td>${l.ini?mesC(l.ini)+" a "+mesC(l.fim):""}</td><td>${fmtN(l.espAc)}</td><td>${fmtN(l.saldoAc)}</td><td class="pct">${fmtP(l.espAc?l.saldoAc/l.espAc:null)}</td>
+    <td>${l.espMes==null?"—":fmtN(l.espMes)}</td><td>${fmtN(l.saldoMes)}</td><td class="pct">${fmtP(l.espMes?l.saldoMes/l.espMes:null)}</td>
+    <td>${l.espAnt==null?"—":fmtN(l.espAnt)}</td><td>${fmtN(l.saldoAnt)}</td><td class="pct">${fmtP(l.espAnt?l.saldoAnt/l.espAnt:null)}</td><td>${l.qtd}</td><td>${l.unid}</td></tr>`;
+  $("tPct").innerHTML=`<thead><tr><th>Empreendimento</th><th>Período acumulado</th><th>Esperado acumulado</th><th>Saldo inadimplente acumulado</th><th>% acumulado</th>
+    <th>Esperado ${mesC(MESREF)}</th><th>Vencido em ${mesC(MESREF)}</th><th>% ${mesC(MESREF)}</th><th>Esperado ${mesC(ant)}</th><th>Vencido em ${mesC(ant)}</th><th>% ${mesC(ant)}</th><th>Títulos</th><th>Unidades</th></tr></thead>
+    <tbody>${L.map(l=>r(l)).join("")}${L.length>1?r({nome:"Total consolidado",ini:null,...T,espMes:T.espMes||null,espAnt:T.espAnt||null},"tot"):""}</tbody>`;
+  $("pctAv").innerHTML=L.filter(l=>l.faltam.length).map(l=>`<div class="av">${esc(l.nome)}: sem recebimento esperado registrado em <b>${l.faltam.map(mesC).join(", ")}</b> (o título vencido mais antigo é de ${mesC(l.ini)}). Esses meses ficam fora do esperado acumulado.</div>`).join("");
+  // esperado mês a mês
+  const ms=[...new Set(Object.values(D.esperado).flatMap(o=>Object.keys(o)))].sort();
+  $("tEsp").innerHTML=`<thead><tr><th>Mês</th>${st.emps.map(e=>`<th>${esc(nomeE(e))}</th>`).join("")}<th>Fonte</th></tr></thead><tbody>`+
+    ms.map(m=>`<tr><td>${mesL(m)}</td>${st.emps.map(e=>`<td>${D.esperado[e]&&D.esperado[e][m]?fmtN(D.esperado[e][m].valor):"—"}</td>`).join("")}<td class="wrap">${esc([...new Set(st.emps.map(e=>D.esperado[e]&&D.esperado[e][m]&&D.esperado[e][m].fonte).filter(Boolean))].join(" · "))}</td></tr>`).join("")+"</tbody>";
+  // fechamento
+  const fx=D.fechamentos||[], atual=fx.find(f=>f.mes===MESREF);
+  $("btnFech").textContent=`Registrar fechamento de ${mesL(MESREF)}`;
+  $("fechInfo").innerHTML=atual?`Fechamento de ${mesC(MESREF)} registrado em ${fmtD(atual.registrado_em)} ${atual.registrado_em.slice(11,16)}${EDITOR?" (registrar de novo substitui)":""}`:"";
+  $("btnFech").onclick=async()=>{
+    const todas=EMPS().map(linhaPct).filter(Boolean);
+    if(st.emps.length!==EMPS().length&&!confirm("O fechamento é registrado com todos os empreendimentos, não só os do filtro. Continuar?")) return;
+    if(atual&&!confirm(`Já existe fechamento de ${mesL(MESREF)}. Substituir?`)) return;
+    const lin=todas.map(l=>({empresa:l.emp,nome:l.nome,inicio:l.ini,fim:l.fim,esperado_acum:l.espAc,saldo_acum:l.saldoAc,esperado_mes:l.espMes,saldo_mes:l.saldoMes,esperado_ant:l.espAnt,saldo_ant:l.saldoAnt,titulos:l.qtd,unidades:l.unid}));
+    const tot={esperado_acum:soma(lin,x=>x.esperado_acum),saldo_acum:soma(lin,x=>x.saldo_acum),esperado_mes:soma(lin,x=>x.esperado_mes||0),saldo_mes:soma(lin,x=>x.saldo_mes)};
+    try{ await local("/fechamento","POST",{mes:MESREF,data_base:D.data_base,linhas:lin,total:tot}); toast("Fechamento registrado. Publicando..."); acompanhar(); }
+    catch(e){ toast("Não foi possível registrar: "+e.message); }
+  };
+  $("fechBox").classList.toggle("hidden",!fx.length);
+  $("tFech").innerHTML=`<thead><tr><th>Mês</th><th>Empreendimento</th><th>Período</th><th>Esperado acum.</th><th>Saldo acum.</th><th>% acum.</th><th>% do mês</th><th>Base de</th><th>Registrado em</th></tr></thead><tbody>`+
+    [...fx].reverse().flatMap(f=>[...f.linhas.filter(l=>st.emps.includes(l.empresa)).map(l=>`<tr><td>${mesL(f.mes)}</td><td>${esc(l.nome)}</td><td>${mesC(l.inicio)} a ${mesC(l.fim)}</td><td>${fmtN(l.esperado_acum)}</td><td>${fmtN(l.saldo_acum)}</td><td class="pct">${fmtP(l.esperado_acum?l.saldo_acum/l.esperado_acum:null)}</td><td>${fmtP(l.esperado_mes?l.saldo_mes/l.esperado_mes:null)}</td><td>${fmtD(f.data_base)}</td><td>${fmtD(f.registrado_em)}</td></tr>`),
+      f.total?`<tr class="sub"><td>${mesL(f.mes)}</td><td>Total</td><td></td><td>${fmtN(f.total.esperado_acum)}</td><td>${fmtN(f.total.saldo_acum)}</td><td class="pct">${fmtP(f.total.esperado_acum?f.total.saldo_acum/f.total.esperado_acum:null)}</td><td>${fmtP(f.total.esperado_mes?f.total.saldo_mes/f.total.esperado_mes:null)}</td><td></td><td></td></tr>`:""]).join("")+"</tbody>";
+}
+
+/* ---------- evolução semanal ---------- */
+function renderSem(){
+  const box=$("chart"), tip=$("tip"), emps=st.emps, todos=emps.length===EMPS().length&&emps.length>1;
+  const pts=D.semanal.map(s=>({d:s.data,v:Object.fromEntries(emps.map(e=>[e,s.valores[e]??null]))}));
+  pts.forEach(p=>p.tot=emps.reduce((a,e)=>a+(p.v[e]||0),0));
+  const series=emps.map(e=>({k:e,nome:nomeE(e),cor:corE(e),val:p=>p.v[e]}));
+  if(todos) series.push({k:"tot",nome:"Total",cor:"var(--text)",val:p=>p.tot,grossa:true});
+  $("legSem").innerHTML=series.map(s=>`<span><i class="sw" style="background:${s.cor}"></i>${esc(s.nome)}</span>`).join("");
+  const W=Math.max(320,box.clientWidth), H=Math.round(Math.min(300,Math.max(210,W*.28))), mg={l:52,r:12,t:12,b:26}, iw=W-mg.l-mg.r, ih=H-mg.t-mg.b;
+  const max=Math.max(1000,...pts.flatMap(p=>series.map(s=>s.val(p)||0)));
+  const step=niceStep(max/4), top=Math.ceil(max/step)*step;
+  const x=i=>mg.l+(pts.length<2?iw/2:i*iw/(pts.length-1)), y=v=>mg.t+ih-(v/top)*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução semanal do saldo inadimplente em R$ mil">`;
+  for(let v=0;v<=top+1e-9;v+=step) s+=`<line x1="${mg.l}" x2="${W-mg.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${mg.l-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${(v/1000).toLocaleString("pt-BR")}</text>`;
+  const every=Math.max(1,Math.ceil(pts.length*54/iw));
+  pts.forEach((p,i)=>{ if(i%every===0||i===pts.length-1) s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted)">${fmtD(p.d).slice(0,5)}${p.d.slice(5,7)==="01"&&+p.d.slice(8)<=7||i===0?"/"+p.d.slice(2,4):""}</text>`; });
+  series.forEach(se=>{ let d="", on=false; pts.forEach((p,i)=>{const v=se.val(p); if(v==null){on=false;return;} d+=(on?"L":"M")+x(i).toFixed(1)+","+y(v).toFixed(1); on=true;});
+    s+=`<path d="${d}" fill="none" stroke="${se.cor}" stroke-width="${se.grossa?2.4:1.8}" stroke-linejoin="round"/>`;
+    const u=pts.length-1, vu=se.val(pts[u]); if(vu!=null) s+=`<circle cx="${x(u)}" cy="${y(vu)}" r="3.5" fill="${se.cor}"/>`; });
+  s+=`<line id="cur" x1="0" x2="0" y1="${mg.t}" y2="${mg.t+ih}" stroke="var(--text-2)" stroke-dasharray="3 3" style="display:none"/>`;
+  s+=`<rect id="hitSem" x="${mg.l}" y="${mg.t}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
+  box.innerHTML=s; box.appendChild(tip);
+  const hit=box.querySelector("#hitSem"), cur=box.querySelector("#cur");
+  hit.addEventListener("mousemove",ev=>{const bx=box.getBoundingClientRect(), sx=(ev.clientX-bx.left)*W/bx.width;
+    const i=Math.max(0,Math.min(pts.length-1,Math.round((sx-mg.l)/(iw/Math.max(1,pts.length-1))))), p=pts[i], q=pts[i-1];
+    cur.setAttribute("x1",x(i)); cur.setAttribute("x2",x(i)); cur.style.display="";
+    tip.innerHTML=`<b>Semana de ${fmtD(p.d)}</b>`+series.map(se=>{const v=se.val(p), a=q?se.val(q):null; return `<div class="r"><span><i style="background:${se.cor}"></i>${esc(se.nome)}</span><span>${v==null?"—":fmtMil(v)}${v!=null&&a!=null?` <small style="color:${v>a?"var(--crit)":"var(--good)"}">${v>a?"▲":"▼"}${fmtMil(Math.abs(v-a))}</small>`:""}</span></div>`;}).join("");
+    tip.style.display="block"; let lx=ev.clientX-bx.left+14; if(lx+220>bx.width) lx=ev.clientX-bx.left-230; tip.style.left=Math.max(0,lx)+"px"; tip.style.top=(ev.clientY-bx.top-10)+"px";});
+  hit.addEventListener("mouseleave",()=>{tip.style.display="none"; cur.style.display="none";});
+}
+function niceStep(v){const p=Math.pow(10,Math.floor(Math.log10(v||1))),n=v/p;return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p;}
+
+/* ---------- comparativos ---------- */
+const dP=(a,b)=>b?fmtP((a-b)/Math.abs(b)):"—";
+const dV=(a,b)=>{const d=a-b; return `<td class="${d>0.005?"up":d<-0.005?"down":""}">${d>0.005?"▲ ":d<-0.005?"▼ ":""}${fmtN(Math.abs(d))}</td>`};
+function renderEmp(){
+  $("empSub").textContent=`R$ · ${fmtD(D.data_base)} × ${fmtD(D.data_anterior)} · ▲ saldo aumentou (atenção) · ▼ saldo caiu`;
+  const L=st.emps.map(e=>{const a=D.titulos.filter(t=>t.empresa===e), b=D.anterior.filter(t=>t.empresa===e); return {n:nomeE(e),e,a:soma(a),b:soma(b),qa:a.length,qb:b.length,ca:clientes(a)};});
+  const T=L.reduce((t,l)=>({a:t.a+l.a,b:t.b+l.b,qa:t.qa+l.qa,qb:t.qb+l.qb,ca:t.ca+l.ca}),{a:0,b:0,qa:0,qb:0,ca:0}), tot=soma(AT());
+  const r=(l,c="")=>`<tr class="${c}"><td>${l.e?`<i class="sw" style="background:${corE(l.e)};margin-right:6px;vertical-align:-1px"></i>`:""}${esc(l.n)}</td><td>${fmtN(l.a)}</td><td>${fmtN(l.b)}</td>${dV(l.a,l.b)}<td>${dP(l.a,l.b)}</td><td>${fmtP(tot?l.a/tot:null)}</td><td>${l.qa}</td><td>${l.qb}</td><td>${l.qa-l.qb>0?"+":""}${l.qa-l.qb}</td><td>${l.ca}</td></tr>`;
+  $("tEmp").innerHTML=`<thead><tr><th>Empreendimento</th><th>Atual</th><th>Anterior</th><th>Δ</th><th>Δ %</th><th>% do total</th><th>Títulos atual</th><th>Títulos ant.</th><th>Δ qtd</th><th>Clientes</th></tr></thead><tbody>${L.map(l=>r(l)).join("")}${L.length>1?r({n:"Total",...T,ca:clientes(AT())},"tot"):""}</tbody>`;
+}
+const FAIXAS=[["0–30 dias",t=>t.dias_aj<=30],["31–60 dias",t=>t.dias_aj>30&&t.dias_aj<=60],["61–90 dias",t=>t.dias_aj>60&&t.dias_aj<=90],["> 90 dias",t=>t.dias_aj>90]];
+function renderAging(){
+  const a=AT(), b=AN();
+  const lin=FAIXAS.map(([n,f])=>({n,a:a.filter(t=>!t.subjudice&&f(t)),b:b.filter(t=>!t.subjudice&&f(t))}));
+  lin.push({n:"Sub judice",a:a.filter(t=>t.subjudice),b:b.filter(t=>t.subjudice)});
+  const r=(n,x,y,c="")=>`<tr class="${c}"><td>${n}</td><td>${fmtN(soma(x))}</td><td>${fmtN(soma(y))}</td>${dV(soma(x),soma(y))}<td>${x.length}</td><td>${y.length}</td></tr>`;
+  $("tAging").innerHTML=`<thead><tr><th>Faixa</th><th>Atual</th><th>Anterior</th><th>Δ</th><th>Qtd at.</th><th>Qtd ant.</th></tr></thead><tbody>${lin.map(l=>r(l.n,l.a,l.b)).join("")}${r("Total",a,b,"tot")}</tbody>`;
+}
+function renderTipo(){
+  const a=AT(), b=AN(), tipos=[...new Set([...Object.keys(TIPOS),...a.map(t=>t.tc),...b.map(t=>t.tc)])];
+  const lin=tipos.map(tc=>({tc,a:a.filter(t=>t.tc===tc),b:b.filter(t=>t.tc===tc)})).filter(l=>l.a.length||l.b.length);
+  const r=(n,x,y,c="")=>`<tr class="${c}"><td>${n}</td><td>${fmtN(soma(x))}</td><td>${fmtN(soma(y))}</td>${dV(soma(x),soma(y))}<td>${dP(soma(x),soma(y))}</td><td>${x.length}</td></tr>`;
+  $("tTipo").innerHTML=`<thead><tr><th>Tipo</th><th>Atual</th><th>Anterior</th><th>Δ</th><th>Δ %</th><th>Qtd</th></tr></thead><tbody>${lin.map(l=>r(`${esc(TIPOS[l.tc]||l.tc)} <span class="tag">${esc(l.tc)}</span>`,l.a,l.b)).join("")}${r("Total",a,b,"tot")}</tbody>`;
+}
+function porCliente(arr){const m=new Map(); arr.forEach(t=>{const k=t.cd_cliente; if(!m.has(k)) m.set(k,{cd:k,nome:t.cliente,emp:new Set(),tit:[]}); const o=m.get(k); o.emp.add(t.empresa); o.tit.push(t);}); return m;}
+function renderTop(){
+  const a=porCliente(AT()), b=porCliente(AN());
+  const L=[...a.values()].map(o=>({...o,v:soma(o.tit),vb:b.has(o.cd)?soma(b.get(o.cd).tit):0})).sort((x,y)=>y.v-x.v).slice(0,10);
+  $("tTop").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th>Atual</th><th>Anterior</th><th>Δ</th><th>Títulos</th><th>Maior atraso</th><th class="l">Status da cobrança</th></tr></thead><tbody>`+
+    L.map((o,i)=>{const s=statusCli(o.cd), sj=o.tit.some(t=>t.subjudice);
+      return `<tr><td>${i+1}</td><td class="cl">${esc(o.nome)} ${sj?'<span class="tag sj">sub judice</span>':""}<span class="mini">${[...o.emp].map(e=>esc(nomeE(e))).join(", ")} · ${new Set(o.tit.map(t=>t.unid)).size} unid.</span></td><td>${fmtN(o.v)}</td><td>${o.vb?fmtN(o.vb):"novo"}</td>${o.vb?dV(o.v,o.vb):"<td></td>"}<td>${o.tit.length}</td><td>${Math.max(...o.tit.map(t=>t.dias_aj))} dias</td><td class="wrap">${s?`<b>${fmtD(s.data)}</b> · ${esc(s.texto)}`:"—"}</td></tr>`;}).join("")+"</tbody>";
+}
+
+/* ---------- recuperação de crédito ---------- */
+function renderRec(){
+  const ka=new Set(D.titulos.map(t=>t.chave)), kt=new Set(D.tratados.map(t=>t.chave));
+  const ant=AN(), rec=ant.filter(t=>!ka.has(t.chave)&&!kt.has(t.chave)), sb=soma(ant), sr=soma(rec);
+  const tr=D.tratados.filter(okE), cx=c=>tr.filter(t=>t.caixa===c);
+  const agu=cx("Aguardando compensação").filter(t=>t.no_sienge), comp=cx("Aguardando compensação").filter(t=>!t.no_sienge), dist=cx("Distrato"), sem=cx("Sem status");
+  $("recSub").innerHTML=`<b>Recuperado</b> = títulos que estavam na base de ${fmtD(D.data_anterior)}, saíram da base de ${fmtD(D.data_base)} e <b>não</b> foram tratados. Os Tratados não-distrato ficam como <b>aguardando compensação</b> enquanto o título ainda estiver no Contas a Receber do Sienge, e passam a <b>compensado</b> quando saem dele.`;
+  const V=v=>`${fmtMil(v)}<small>R$ mil</small>`;
+  $("recTiles").innerHTML=`
+   <div class="tile"><div class="k">Total recuperado na semana</div><div class="v">${V(sr)}</div><div class="s">${rec.length} títulos</div></div>
+   <div class="tile" title="Recuperado ÷ saldo da semana anterior"><div class="k">% recuperação</div><div class="v">${fmtP(sb?sr/sb:null)}</div><div class="s">do saldo de ${fmtD(D.data_anterior).slice(0,5)}</div></div>
+   <div class="tile"><div class="k">Clientes regularizados</div><div class="v">${new Set(rec.map(t=>t.cd_cliente)).size}</div><div class="s">com título recuperado</div></div>
+   <div class="tile" title="Tratados com status diferente de Distrato que ainda estão no Contas a Receber do Sienge"><div class="k">Aguardando compensação</div><div class="v">${V(soma(agu))}</div><div class="s">${agu.length} títulos ainda no Sienge</div></div>
+   <div class="tile" title="Tratados com status diferente de Distrato que já saíram do Contas a Receber do Sienge"><div class="k">Compensado (tratados)</div><div class="v">${V(soma(comp))}</div><div class="s">${comp.length} títulos já saíram do Sienge</div></div>
+   <div class="tile"><div class="k">Distrato</div><div class="v">${V(soma(dist))}</div><div class="s">${dist.length} títulos${sem.length?` · <span class="alerta warn">${sem.length} sem status</span>`:""}</div></div>`;
+  $("tRec").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Valor recuperado</th><th>% do total</th><th>% do cliente</th></tr></thead><tbody>`+
+    (rec.length?rec.sort((x,y)=>y.total-x.total).map((t,i)=>{const doCli=soma(ant.filter(x=>x.cd_cliente===t.cd_cliente));
+      return `<tr><td>${i+1}</td><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>${esc(t.tc)}</td><td>${fmtN(t.total)}</td><td>${fmtP(sr?t.total/sr:null)}</td><td>${fmtP(doCli?t.total/doCli:null)}</td></tr>`;}).join("")
+     :`<tr><td colspan="7" class="l" style="color:var(--muted)">Nenhum título recuperado nesta semana.</td></tr>`)+"</tbody>";
+}
+
+/* ---------- base de títulos (com Tratar) ---------- */
+function renderBase(){
+  const q=($("q").value||"").toLowerCase().trim(), a=AT();
+  const L=a.filter(t=>!q||[t.cliente,t.documento,t.unid,t.parc].join(" ").toLowerCase().includes(q)).sort((x,y)=>y.dias_aj-x.dias_aj||x.cliente.localeCompare(y.cliente)||x.venc.localeCompare(y.venc));
+  $("baseSub").innerHTML=`Base de ${fmtD(D.data_base)}: títulos vencidos de clientes com algum atraso acima de ${D.regra_dias} dias, já sem os Tratados.`+(EDITOR?` <b>Marque os títulos e clique em “Tratar selecionados”</b> para tirar da inadimplência (distrato, pagamento em trânsito, renegociação…).`:"");
+  $("tBase").innerHTML=`<thead><tr><th class="edit"><input type="checkbox" class="ck" id="ckAll" aria-label="Marcar todos os visíveis"></th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Vencimento</th><th>Dias</th><th title="Maior atraso do cliente">Dias ajust.</th><th>Total</th><th class="l">Último status da cobrança</th></tr></thead><tbody>`+
+    L.map(t=>{const s=statusCli(t.cd_cliente); return `<tr><td class="edit"><input type="checkbox" class="ck" data-k="${esc(t.chave)}" ${SEL.has(t.chave)?"checked":""} aria-label="Selecionar"></td><td class="cl">${esc(t.cliente)} ${t.subjudice?'<span class="tag sj">sub judice</span>':""}<span class="mini">${esc(nomeE(t.empresa))} · unid. ${esc(t.unid)}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>${esc(t.tc)}</td><td>${fmtD(t.venc)}</td><td>${t.dias}</td><td>${t.dias_aj}</td><td>${fmtN(t.total)}</td><td class="wrap">${s?`<b>${fmtD(s.data)}</b> · ${esc(s.texto)}`:"—"}</td></tr>`;}).join("")+"</tbody>";
+  $("baseFoot").textContent=`${L.length} de ${a.length} títulos · R$ ${fmtN(soma(L))}`;
+  const upd=()=>{ $("nSel").textContent=SEL.size?`${SEL.size} selecionado(s) · R$ ${fmtN(soma(D.titulos.filter(t=>SEL.has(t.chave))))}`:""; $("btnTratar").disabled=!SEL.size; };
+  $("tBase").querySelectorAll("input[data-k]").forEach(c=>c.onchange=()=>{c.checked?SEL.add(c.dataset.k):SEL.delete(c.dataset.k); upd();});
+  $("ckAll").onchange=e=>{L.forEach(t=>e.target.checked?SEL.add(t.chave):SEL.delete(t.chave)); renderBase();};
+  upd();
+}
+let MODAL=null;
+function abrirModal(titulo,texto,status,obs,acao){
+  $("mTit").textContent=titulo; $("mTxt").textContent=texto;
+  $("mStatus").innerHTML=D.status_tratados.map(s=>`<option ${s.status===status?"selected":""}>${esc(s.status)}</option>`).join("");
+  $("mObs").value=obs||""; MODAL=acao; $("modal").style.display="flex"; $("mStatus").focus();
+}
+$("mCancel").onclick=()=>{$("modal").style.display="none";};
+$("modal").addEventListener("keydown",e=>{if(e.key==="Escape") $("modal").style.display="none";});
+$("mOk").onclick=async()=>{ const b=$("mOk"); b.disabled=true;
+  try{ await MODAL($("mStatus").value,$("mObs").value.trim()); $("modal").style.display="none"; }
+  catch(e){ toast("Não foi possível salvar: "+e.message); } finally{ b.disabled=false; } };
+$("btnTratar").onclick=()=>{
+  const tit=D.titulos.filter(t=>SEL.has(t.chave));
+  abrirModal(`Tratar ${tit.length} título(s)`,`${new Set(tit.map(t=>t.cliente)).size} cliente(s) · R$ ${fmtN(soma(tit))}. Saem da base de inadimplência e vão para a caixinha do status escolhido na Recuperação de Crédito.`,"","",
+    async(status,obs)=>{ await local("/tratar","POST",{itens:tit.map(t=>({chave:t.chave,status,obs}))}); SEL.clear(); toast("Tratados salvos. Publicando..."); acompanhar(); });
+};
+
+/* ---------- tratados ---------- */
+function renderTrat(){
+  const q=($("qt").value||"").toLowerCase().trim(), fs=$("fStatus").value;
+  const tr=D.tratados.filter(okE), L=tr.filter(t=>(!q||[t.cliente,t.documento,t.obs].join(" ").toLowerCase().includes(q))&&(!fs||(fs==="(sem)"?!t.status:t.status===fs)))
+    .sort((x,y)=>(y.tratado_em||"").localeCompare(x.tratado_em||"")||x.cliente.localeCompare(y.cliente));
+  $("tratSub").innerHTML=`Histórico de títulos tirados da base (não apagar). ${tr.length} títulos · R$ ${fmtN(soma(tr))}.`+(EDITOR?" Clique em <b>Editar</b> para mudar o status ou em <b>Desfazer</b> para o título voltar à base.":"");
+  $("tTrat").innerHTML=`<thead><tr><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>Vencimento</th><th>Total</th><th class="l">Status de saída</th><th class="l">No Sienge</th><th class="l">Observação</th><th class="edit"></th></tr></thead><tbody>`+
+    L.map(t=>`<tr><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)} <span class="tag">${esc(t.tc)}</span></td><td>${fmtD(t.venc)}</td><td>${fmtN(t.total)}</td>
+      <td class="l">${t.status?esc(t.status):'<span class="tag am">sem status</span>'}<span class="mini">${t.tratado_em?"tratado em "+fmtD(t.tratado_em):"da planilha"}</span></td><td class="l">${t.no_sienge?'<span class="tag">em aberto</span>':(t.caixa==="Distrato"?'<span class="tag ok">saiu do Sienge</span>':'<span class="tag ok">saiu (compensado)</span>')}</td>
+      <td class="wrap" style="min-width:140px;max-width:240px">${esc(t.obs&&t.obs!==t.status?t.obs:"")}</td>
+      <td class="edit" style="white-space:nowrap"><button class="btn" type="button" data-ed="${esc(t.chave)}">Editar</button> <button class="btn" type="button" data-un="${esc(t.chave)}">Desfazer</button></td></tr>`).join("")+"</tbody>";
+  $("tTrat").querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>{const t=D.tratados.find(x=>x.chave===b.dataset.ed);
+    abrirModal("Editar tratado",`${t.cliente} · ${t.documento} parc. ${t.parc} · R$ ${fmtN(t.total)}`,t.status,t.obs,
+      async(status,obs)=>{ await local("/tratar","POST",{itens:[{chave:t.chave,status,obs}]}); toast("Status salvo. Publicando..."); acompanhar(); });});
+  $("tTrat").querySelectorAll("[data-un]").forEach(b=>b.onclick=async()=>{const t=D.tratados.find(x=>x.chave===b.dataset.un);
+    if(!confirm(`Desfazer o tratado de ${t.cliente} (${t.documento} parc. ${t.parc})? Se o título ainda estiver em aberto no Sienge, ele volta para a base de inadimplência.`)) return;
+    try{ await local("/tratar","POST",{itens:[{chave:t.chave,remover:true}]}); toast("Desfeito. Publicando..."); acompanhar(); }catch(e){ toast("Não foi possível desfazer: "+e.message); }});
+}
+
+/* ---------- avisos ---------- */
+function renderAvisos(){
+  const av=[];
+  (D.avisos||[]).forEach(a=>av.push(`<div class="av crit">${esc(a)}</div>`));
+  if(D.cobranca&&D.cobranca.datas_estranhas.length) av.push(`<div class="av"><b>Datas fora do esperado no relatório de Títulos em Cobrança</b> (${esc(D.cobranca.arquivo)}, de ${fmtD(D.cobranca.data)}). Datas futuras não são usadas como último status. Vale corrigir no Sienge:<ul style="margin:6px 0 0;padding-left:18px">`+
+    D.cobranca.datas_estranhas.map(x=>`<li>${esc(x.cliente)} (${esc(x.documento||"")}): <b>${fmtD(x.data)}</b> · ${esc(x.texto)}</li>`).join("")+"</ul></div>");
+  const semStatus=D.titulos.filter(t=>okE(t)&&!statusCli(t.cd_cliente));
+  if(semStatus.length) av.push(`<div class="av">${new Set(semStatus.map(t=>t.cd_cliente)).size} cliente(s) da base sem lançamento no relatório de Títulos em Cobrança: ${[...new Set(semStatus.map(t=>t.cliente))].map(esc).join(", ")}.</div>`);
+  if(D.fora_regra&&D.fora_regra.length) av.push(`<div class="av" style="border-left-color:var(--muted)">Clientes fora da base pela regra dos ${D.regra_dias} dias (todos os títulos vencidos deles têm até ${D.regra_dias} dias de atraso, a maioria vencida nos últimos dias): ${D.fora_regra.length}.<details><summary style="cursor:pointer">ver nomes</summary>${D.fora_regra.map(esc).join(", ")}</details></div>`);
+  $("avisos").innerHTML=av.join("")||`<p class="foot">Nenhum aviso.</p>`;
+}
+</script>
+</body>
+</html>
