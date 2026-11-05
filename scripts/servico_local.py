@@ -132,8 +132,11 @@ def fechamento(corpo):
 # ---------- observador das pastas ----------
 def assinatura_pastas(c):
     out = []
-    for pasta, padrao, rec in ((caminho(c.get("pasta_entrada", "entrada")), "*.*", False),
-                               (caminho(c.get("pasta_boletagem", "entrada/boletagem")), "*.pdf", True)):
+    fontes = [(caminho(c.get("pasta_entrada", "entrada")), "*.*", False),
+              (caminho(c.get("pasta_boletagem", "entrada/boletagem")), "*.pdf", True)]
+    if c.get("pasta_planilha"):            # planilha de inadimplência no OneDrive: quando alguém salva, o painel atualiza
+        fontes.append((caminho(c["pasta_planilha"]), c.get("padrao_planilha", "Inadimpl*Carozzo*.xlsx"), False))
+    for pasta, padrao, rec in fontes:
         if not pasta.is_dir(): out.append(None); continue
         fs = (pasta.rglob(padrao) if rec else pasta.glob(padrao))
         out.append(sorted((f.name, f.stat().st_mtime) for f in fs if f.is_file() and not f.name.startswith("~$")))

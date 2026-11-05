@@ -221,9 +221,10 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <summary>Filtros</summary>
       <div class="menu-tit">FILTROS</div>
       <p style="margin:0 0 12px;font-size:12px;color:var(--muted)" id="dica">Clique para filtrar. Segure <b>Ctrl</b> e clique para selecionar mais de um.</p>
+      <div class="fsec hidden" id="secVis"><h3>Base</h3><div id="fVis"></div></div>
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Ir para</h3><nav class="nav">
-        <a href="#cRes">Resumo da semana</a><a href="#cEmp">Por empreendimento</a><a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a>
+        <a href="#cRes">Resumo da semana</a><a href="#cConf" id="navConf">Conferência Sienge × planilha</a><a href="#cEmp">Por empreendimento</a><a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a>
         <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Clientes inadimplentes</a>
         <a href="#cRec">Recuperação de crédito</a><a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a></nav></div>
     </details>
@@ -235,6 +236,12 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <p class="resumo" id="resTxt"></p>
       <div class="scroll" style="max-height:none"><table id="tRes1" class="cmp"></table></div>
       <p class="foot">▼ queda (bom: saldo/títulos reduzidos) · ▲ alta (atenção: saldo/títulos aumentaram)</p>
+    </section>
+    <section class="card hidden" id="cConf">
+      <h2>Conferência · Sienge × planilha</h2>
+      <p class="sub" id="confSub"></p>
+      <div class="scroll" style="max-height:none"><table id="tConf" class="cmp"></table></div>
+      <div id="confDet"></div>
     </section>
 
     <section class="card" id="cEmp">
@@ -333,7 +340,8 @@ const addMes=(m,n)=>{let[y,mm]=m.split("-").map(Number);mm+=n;while(mm>12){mm-=1
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const $=id=>document.getElementById(id);
 const soma=(a,f=t=>t.total)=>a.reduce((s,t)=>s+f(t),0);
-let D=null, SENHA=null, EDITOR=false, st={emps:null}, MESREF=null, SEL=new Set();
+let D=null, SENHA=null, EDITOR=false, st={emps:null}, MESREF=null, SEL=new Set(), VIEW=null;
+try{VIEW=localStorage.getItem("inad-visao")}catch(e){}
 try{const s=JSON.parse(localStorage.getItem("inad-filtros")||"null"); if(s) st=s;}catch(e){}
 
 /* ---------- acesso e dados (mesma criptografia do painel de despesas: PBKDF2 + AES-GCM) ---------- */
@@ -435,16 +443,26 @@ function mesesRef(){
   const ms=new Set(); Object.values(D.esperado).forEach(o=>Object.keys(o).forEach(m=>ms.add(m)));
   const lim=D.data_base.slice(0,7); return [...ms].filter(m=>m<=lim).sort();
 }
+function aplicarVisao(){
+  if(!D.visoes) return;
+  if(!VIEW||!D.visoes[VIEW]) VIEW=D.visao_padrao;
+  const v=D.visoes[VIEW]; Object.assign(D,{titulos:v.titulos,anterior:v.anterior,data_base:v.data_base,data_anterior:v.data_anterior,semanal:v.semanal});
+  D.fontes.contas_receber=v.fonte;
+  const ks=Object.keys(D.visoes); $("secVis").classList.toggle("hidden",ks.length<2); $("fVis").className="fgrid";
+  $("fVis").innerHTML=ks.map(k=>`<button type="button" class="fbtn" aria-pressed="${k===VIEW}">${esc(D.visoes[k].rotulo)}<span class="mini" style="margin-left:auto">${fmtD(D.visoes[k].data_base).slice(0,5)}</span></button>`).join("");
+  $("fVis").querySelectorAll("button").forEach((b,i)=>b.onclick=()=>{ if(ks[i]===VIEW) return; VIEW=ks[i]; try{localStorage.setItem("inad-visao",VIEW)}catch(e){} init(); });
+}
 function init(){
+  aplicarVisao();
   if(!Array.isArray(st.emps)) st.emps=EMPS(); st.emps=EMPS().filter(x=>st.emps.includes(x)); if(!st.emps.length) st.emps=EMPS();
   const ms=mesesRef(), padrao=addMes(D.data_base.slice(0,7),-1);
   if(!MESREF||!ms.includes(MESREF)) MESREF=ms.includes(padrao)?padrao:ms[ms.length-1];
   $("mesRef").innerHTML=ms.map(m=>`<option value="${m}" ${m===MESREF?"selected":""}>${mesL(m)}</option>`).join("");
   $("mesRef").onchange=e=>{MESREF=e.target.value; renderPct(); renderResumo();};
-  $("stamp").innerHTML=`Relatório de ${fmtD(D.data_base)} · anterior ${fmtD(D.data_anterior)}<br>Gerado em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}`;
+  $("stamp").innerHTML=`${D.visoes?esc(D.visoes[VIEW].rotulo)+" · ":""}${fmtD(D.data_base)} × ${fmtD(D.data_anterior)}<br>Gerado em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}`;
   $("fStatus").innerHTML=`<option value="">Todos os status</option>`+D.status_tratados.map(s=>`<option>${esc(s.status)}</option>`).join("")+`<option value="(sem)">Sem status</option>`;
   $("fStatus").onchange=renderTrat; $("qt").oninput=renderTrat; $("q").oninput=renderBase;
-  $("fontes").textContent=`Fontes: Contas a Receber ${D.fontes.contas_receber}; Títulos em Cobrança ${D.fontes.cobranca||"—"}; recebimento esperado pelos relatórios enviados ao BPO. Regra: entra o cliente com algum título vencido há mais de ${D.regra_dias} dias (com todos os títulos vencidos dele). Dados criptografados.`;
+  $("fontes").textContent=`Fontes: base ${D.fontes.contas_receber}; sub judice e status complementados pelo relatório de Títulos em Cobrança ${D.fontes.cobranca||"—"}; recebimento esperado pelos relatórios enviados ao BPO. Dados criptografados.`;
   if(window.matchMedia("(max-width:900px)").matches) $("fbox").open=false;
   if(TOQUE) $("dica").textContent="Toque para filtrar. Toque em mais de um para combinar.";
   SEL.clear(); listaEmp(); render();
@@ -452,7 +470,7 @@ function init(){
 window.addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>D&&renderSem(),120)});
 const AT=()=>D.titulos.filter(okE), AN=()=>D.anterior.filter(okE);
 const statusCli=cd=>(D.cobranca&&D.cobranca.status[cd])||null;
-function render(){renderResumo();renderPct();renderSem();renderEmp();renderAging();renderTipo();renderTop();renderRec();renderBase();renderTrat();renderAvisos();}
+function render(){renderResumo();renderConf();renderPct();renderSem();renderEmp();renderAging();renderTipo();renderTop();renderRec();renderBase();renderTrat();renderAvisos();}
 
 /* ---------- quadros ---------- */
 function delta(a,b,fmt,menorMelhor=true){
@@ -625,7 +643,7 @@ function renderRec(){
 function renderBase(){
   const q=($("q").value||"").toLowerCase().trim(), a=AT();
   const L=a.filter(t=>!q||[t.cliente,t.documento,t.unid,t.parc].join(" ").toLowerCase().includes(q)).sort((x,y)=>y.dias_aj-x.dias_aj||x.cliente.localeCompare(y.cliente)||x.venc.localeCompare(y.venc));
-  $("baseSub").innerHTML=`Base de ${fmtD(D.data_base)}: títulos vencidos de clientes com algum atraso acima de ${D.regra_dias} dias, já sem os Tratados.`+(EDITOR?` <b>Marque os títulos e clique em “Tratar selecionados”</b> para tirar da inadimplência (distrato, pagamento em trânsito, renegociação…).`:"");
+  $("baseSub").innerHTML=(VIEW==="planilha"?`Aba Base Atual da planilha de ${fmtD(D.data_base)}, sem os títulos tratados pelo painel.`:`Base de ${fmtD(D.data_base)}: títulos vencidos de clientes com algum atraso acima de ${D.regra_dias} dias, já sem os Tratados.`)+(EDITOR?` <b>Marque os títulos e clique em “Tratar selecionados”</b> para tirar da inadimplência (distrato, pagamento em trânsito, renegociação…).`:"");
   $("tBase").innerHTML=`<thead><tr><th class="edit"><input type="checkbox" class="ck" id="ckAll" aria-label="Marcar todos os visíveis"></th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Vencimento</th><th>Dias</th><th title="Maior atraso do cliente">Dias ajust.</th><th>Total</th><th class="l">Último status da cobrança</th></tr></thead><tbody>`+
     L.map(t=>{const s=statusCli(t.cd_cliente); return `<tr><td class="edit"><input type="checkbox" class="ck" data-k="${esc(t.chave)}" ${SEL.has(t.chave)?"checked":""} aria-label="Selecionar"></td><td class="cl">${esc(t.cliente)} ${t.subjudice?'<span class="tag sj">sub judice</span>':""}<span class="mini">${esc(nomeE(t.empresa))} · unid. ${esc(t.unid)}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>${esc(t.tc)}</td><td>${fmtD(t.venc)}</td><td>${t.dias}</td><td>${t.dias_aj}</td><td>${fmtN(t.total)}</td><td class="wrap">${s?`<b>${fmtD(s.data)}</b> · ${esc(s.texto)}`:"—"}</td></tr>`;}).join("")+"</tbody>";
   $("baseFoot").textContent=`${L.length} de ${a.length} títulos · R$ ${fmtN(soma(L))}`;
@@ -656,12 +674,12 @@ function renderTrat(){
   const q=($("qt").value||"").toLowerCase().trim(), fs=$("fStatus").value;
   const tr=D.tratados.filter(okE), L=tr.filter(t=>(!q||[t.cliente,t.documento,t.obs].join(" ").toLowerCase().includes(q))&&(!fs||(fs==="(sem)"?!t.status:t.status===fs)))
     .sort((x,y)=>(y.tratado_em||"").localeCompare(x.tratado_em||"")||x.cliente.localeCompare(y.cliente));
-  $("tratSub").innerHTML=`Histórico de títulos tirados da base (não apagar). ${tr.length} títulos · R$ ${fmtN(soma(tr))}.`+(EDITOR?" Clique em <b>Editar</b> para mudar o status ou em <b>Desfazer</b> para o título voltar à base.":"");
+  $("tratSub").innerHTML=`Histórico de títulos tirados da base. ${tr.length} títulos · R$ ${fmtN(soma(tr))}.`+(D.visoes&&D.visoes.planilha?" Vêm da aba Tratados da planilha e dos classificados pelo painel, e saem das duas bases.":"")+(EDITOR?" Os classificados pelo painel podem ser editados ou desfeitos aqui; os da planilha, na própria planilha.":"");
   $("tTrat").innerHTML=`<thead><tr><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>Vencimento</th><th>Total</th><th class="l">Status de saída</th><th class="l">No Sienge</th><th class="l">Observação</th><th class="edit"></th></tr></thead><tbody>`+
     L.map(t=>`<tr><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)} <span class="tag">${esc(t.tc)}</span></td><td>${fmtD(t.venc)}</td><td>${fmtN(t.total)}</td>
-      <td class="l">${t.status?esc(t.status):'<span class="tag am">sem status</span>'}<span class="mini">${t.tratado_em?"tratado em "+fmtD(t.tratado_em):"da planilha"}</span></td><td class="l">${t.no_sienge?'<span class="tag">em aberto</span>':(t.caixa==="Distrato"?'<span class="tag ok">saiu do Sienge</span>':'<span class="tag ok">saiu (compensado)</span>')}</td>
+      <td class="l">${t.status?esc(t.status):'<span class="tag am">sem status</span>'}<span class="mini">${t.tratado_em?"pelo painel em "+fmtD(t.tratado_em):"aba Tratados da planilha"}</span></td><td class="l">${t.no_sienge?'<span class="tag">em aberto</span>':(t.caixa==="Distrato"?'<span class="tag ok">saiu do Sienge</span>':'<span class="tag ok">saiu (compensado)</span>')}</td>
       <td class="wrap" style="min-width:110px;max-width:220px">${esc(t.obs&&t.obs!==t.status?t.obs:"")}</td>
-      <td class="edit" style="white-space:nowrap"><button class="btn" type="button" data-ed="${esc(t.chave)}">Editar</button> <button class="btn" type="button" data-un="${esc(t.chave)}">Desfazer</button></td></tr>`).join("")+"</tbody>";
+      <td class="edit" style="white-space:nowrap">${t.origem==="planilha"&&D.visoes&&D.visoes.planilha?'<span class="tag" title="Classificado na aba Tratados da planilha: altere lá">na planilha</span>':`<button class="btn" type="button" data-ed="${esc(t.chave)}">Editar</button> <button class="btn" type="button" data-un="${esc(t.chave)}">Desfazer</button>`}</td></tr>`).join("")+"</tbody>";
   $("tTrat").querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>{const t=D.tratados.find(x=>x.chave===b.dataset.ed);
     abrirModal("Editar tratado",`${t.cliente} · ${t.documento} parc. ${t.parc} · R$ ${fmtN(t.total)}`,t.status,t.obs,
       async(status,obs)=>{ await local("/tratar","POST",{itens:[{chave:t.chave,status,obs}]}); toast("Status salvo. Publicando..."); acompanhar(); });});
@@ -674,6 +692,26 @@ function renderTrat(){
 function renderAvisos(){
   const el=$("avisos"); el.innerHTML=(D.avisos||[]).map(a=>`<div class="av crit">${esc(a)}</div>`).join("");
 }
+/* ---------- conferência entre as duas bases ---------- */
+function renderConf(){
+  const ok=D.visoes&&D.visoes.sienge&&D.visoes.planilha;
+  $("cConf").classList.toggle("hidden",!ok); $("navConf").classList.toggle("hidden",!ok); if(!ok) return;
+  const S=D.visoes.sienge.titulos.filter(okE), Pl=D.visoes.planilha.titulos.filter(okE);
+  const ds=D.visoes.sienge.data_base, dp=D.visoes.planilha.data_base;
+  $("confSub").innerHTML=`Automática (Sienge) de <b>${fmtD(ds)}</b> × planilha de <b>${fmtD(dp)}</b>.`+(ds!==dp?` <span class="alerta warn">datas diferentes: a planilha ainda não é desta semana</span>`:"")+` Os Tratados (planilha + painel) saem das duas.`;
+  const L=st.emps.map(e=>{const a=S.filter(t=>t.empresa===e), b=Pl.filter(t=>t.empresa===e); return {e,n:nomeE(e),sa:soma(a),sb:soma(b),qa:a.length,qb:b.length};});
+  const T={n:"Total",sa:soma(S),sb:soma(Pl),qa:S.length,qb:Pl.length};
+  const r=(l,c="")=>{const d=l.sa-l.sb, dq=l.qa-l.qb; return `<tr class="${c}"><td class="l">${esc(l.n)}</td><td>${fmtN(l.sa)}</td><td>${l.qa}</td><td>${fmtN(l.sb)}</td><td>${l.qb}</td><td class="${Math.abs(d)>0.005?"up":""}">${Math.abs(d)>0.005?fmtN(d):"✓ igual"}</td><td>${dq?(dq>0?"+":"")+dq:"—"}</td></tr>`;};
+  $("tConf").innerHTML=`<thead><tr><th class="l">Empreendimento</th><th>Sienge (R$)</th><th>Títulos</th><th>Planilha (R$)</th><th>Títulos</th><th>Diferença (R$)</th><th>Dif. títulos</th></tr></thead><tbody>${L.map(l=>r(l)).join("")}${L.length>1?r(T,"tot"):""}</tbody>`;
+  const ms=new Map(S.map(t=>[t.chave,t])), mp=new Map(Pl.map(t=>[t.chave,t]));
+  const soS=S.filter(t=>!mp.has(t.chave)), soP=Pl.filter(t=>!ms.has(t.chave)), dif=S.filter(t=>mp.has(t.chave)&&Math.abs(t.total-mp.get(t.chave).total)>0.005);
+  const lista=(tit,arr,f)=>arr.length?`<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600;font-size:13px">${tit} (${arr.length})</summary><div class="scroll" style="margin-top:6px;max-height:320px"><table class="cmp"><tbody>${arr.map(f).join("")}</tbody></table></div></details>`:"";
+  const lin=t=>`<tr><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>${fmtD(t.venc)}</td><td>${t.dias} dias</td><td>${fmtN(t.total)}</td></tr>`;
+  $("confDet").innerHTML=(!soS.length&&!soP.length&&!dif.length)?`<p class="foot">As duas bases têm exatamente os mesmos títulos e valores.</p>`:
+    lista("Só na base automática do Sienge",soS,lin)+lista("Só na planilha",soP,lin)+
+    lista("Mesmo título, valor diferente",dif,t=>`<tr><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>Sienge ${fmtN(t.total)}</td><td>Planilha ${fmtN(mp.get(t.chave).total)}</td></tr>`);
+}
+
 /* ---------- menu lateral: destaca a seção que está na tela ---------- */
 (function(){
   const links=[...document.querySelectorAll(".nav a")], secoes=links.map(a=>document.querySelector(a.getAttribute("href")));

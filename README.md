@@ -5,7 +5,24 @@ Painel interno de inadimplência (evolução semanal, % sobre o recebimento espe
 - **Senha:** fica em `scripts/senha.txt`, um arquivo local que não vai para o GitHub. Precisa ter pelo menos 12 caracteres. Para trocar a senha, edite o arquivo e rode `atualizar_painel.bat`.
 - **Dados de clientes:** nunca vão para o GitHub sem criptografia. Os relatórios do Sienge (`entrada/`) e o histórico (`dados/`) ficam só no seu computador. No GitHub vai apenas `site/data/painel.enc.json`, que é criptografado.
 
-## Rotina semanal
+## De onde vêm os dados: duas bases, lado a lado
+
+O painel monta **duas bases**. Você escolhe qual ver em **Base**, no menu lateral. O card **Conferência Sienge × planilha** mostra as diferenças título a título.
+
+| Base | De onde vem |
+|---|---|
+| **Automática (Sienge)** | CSV do Contas a Receber em `entrada`, com a regra dos 10 dias e sem os Tratados |
+| **Planilha** | Planilha `Inadimplência_Carozzo_DDMMAAAA.xlsx` com a data mais recente no nome, na pasta do OneDrive `2. Carozzo\INADIMPLENCIA` (abas Base Atual e Base Anterior) |
+
+As informações abaixo valem para as duas bases:
+- **Tratados:** aba Tratados da planilha mais os classificados pelo painel (o do painel vale por cima).
+- **Sub judice:** PDF de Títulos em Cobrança, ou "Sim" na coluna AA da planilha.
+- **Status da cobrança:** o lançamento mais recente entre o PDF e a Base Posição Clientes.
+- **Variação Semanal:** histórico da planilha.
+
+Quando alguém salva a planilha, o OneDrive sincroniza, o serviço percebe e publica sozinho.
+
+## Rotina semanal (modo relatórios do Sienge)
 
 1. No Sienge, exporte os dois relatórios e salve na pasta **`entrada`**:
    - **Contas a Receber** em **CSV**:

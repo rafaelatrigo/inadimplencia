@@ -241,88 +241,239 @@ def esperado_por_mes():
 
 
 # ============ 4. Monta a base ============
-def montar():
-    f_csv = achar_csv()
-    data_base = data_do_arquivo(f_csv)
-    sienge = ler_csv(f_csv)
-    tratados = ler_json(DADOS / "tratados.json", [])
-    chaves_trat = {t["chave"] for t in tratados}
-    cob = None
-    f_cob = achar_cobranca()
-    if f_cob:
-        cob = ler_cobranca(f_cob)
-    else:
-        avisos.append("Não achei o PDF de Títulos em Cobrança: status da cobrança e Sub judice ficaram sem atualizar.")
-    subj = set(cob["subjudice_docs"]) if cob else set()
+# ============ 4. Planilha de inadimplência (fonte principal, quando configurada) ============
+def achar_planilha():
+    pasta = caminho(cfg["pasta_planilha"]) if cfg.get("pasta_planilha") else None
+    if not pasta or not pasta.is_dir():
+        if pasta: avisos.append(f"Pasta da planilha não encontrada: {pasta}. Usei os relatórios do Sienge.")
+        return None
+    cand = listar(pasta, cfg.get("padrao_planilha", "Inadimpl*Carozzo*.xlsx"))
+    def data_nome(f):
+        m = re.search(r"(\d{2})(\d{2})(20\d{2})", f.stem)
+        try: return datetime.date(int(m[3]), int(m[2]), int(m[1])) if m else None
+        except ValueError: return None
+    datados = [(data_nome(f), f.stat().st_mtime, f) for f in cand if data_nome(f)]
+    if not datados:
+        return None
+    datados.sort(key=lambda x: (x[0], x[1]))
+    d, _, f = datados[-1]                       # a data do nome do arquivo manda; empate = a salva por último
+    anteriores = sorted({x[0] for x in datados if x[0] < d})
+    return f, d, (anteriores[-1] if anteriores else None)
 
-    vencidos = [r for r in sienge if r["venc"] <= data_base.isoformat()]
-    candidatos = [r for r in vencidos if r["chave"] not in chaves_trat]
+
+def _f(v):
+    try: return float(str(v).replace(",", ".")) if v not in (None, "") else 0.0
+    except ValueError: return 0.0
+
+
+def _dia(v):
+    if isinstance(v, datetime.datetime): return v.date().isoformat()
+    if isinstance(v, datetime.date): return v.isoformat()
+    try: return data_br(str(v)[:10]).isoformat()
+    except ValueError: return str(v)[:10] if v else None
+
+
+def _titulo(r):
+    """Linha das abas Base Atual / Base Anterior / Tratados (colunas A..Y) -> título."""
+    return {"chave": chave(r[3], r[5]), "venc": _dia(r[0]), "cliente": str(r[1] or "").strip(), "cd_cliente": str(r[2]).strip(),
+            "documento": str(r[3]).strip(), "titulo": str(r[4]).strip(), "parc": parc_texto(r[5]), "tc": str(r[6] or "").strip(),
+            "unid": str(r[7] or "").strip(), "valor_original": _f(r[8]), "total": _f(r[22]), "dias": int(_f(r[14])),
+            "empresa": str(r[24] or "").strip(), "cd_empresa": str(r[23]).strip()}
+
+
+def ler_planilha(f):
+    import openpyxl, warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        wb = openpyxl.load_workbook(f, data_only=True, read_only=True)
+    abas = {ws.title.strip(): ws for ws in wb.worksheets}
+    aba = lambda trecho: next((ws for t, ws in abas.items() if trecho.lower() in t.lower()), None)
+    def linhas(ws):
+        return [r for r in ws.iter_rows(min_row=2, values_only=True) if r and r[0] and len(r) > 24 and r[3]] if ws else []
+    sim = lambda v: str(v or "").strip().lower() == "sim"
+    atual = [dict(_titulo(r), subj_planilha=sim(r[26] if len(r) > 26 else None)) for r in linhas(aba("Base Atual"))]
+    anterior = [dict(_titulo(r), subj_planilha=sim(r[26] if len(r) > 26 else None)) for r in linhas(aba("Base Anterior"))]
+    trat = []
+    for r in linhas(aba("Tratados")):
+        t = _titulo(r)
+        t.update(status=str(r[27]).strip() if len(r) > 27 and r[27] else "", obs=str(r[28]).strip() if len(r) > 28 and r[28] else "",
+                 tratado_em=None, origem="planilha")
+        trat.append(t)
+    # Base Posição Clientes: última descrição de cada cliente ("27/10/2026 - TEXTO")
+    posicao = {}
+    ws = aba("Posição Clientes") or aba("Posicao Clientes")
+    if ws:
+        for r in ws.iter_rows(min_row=2, values_only=True):
+            if not r or len(r) < 6 or not r[2] or not r[5]: continue
+            m = re.match(r"\s*(\d\d/\d\d/\d{4})\s*-\s*(.*)", str(r[5]))
+            if m:
+                posicao[str(r[2]).strip().upper()] = {"data": data_br(m.group(1)).isoformat(), "texto": m.group(2).strip()}
+    # Variação Semanal (R$ mil)
+    sem = defaultdict(dict)
+    ws = aba("Variação Semanal")
+    if ws:
+        grade = [list(r) for r in ws.iter_rows(values_only=True)]
+        rot = {"Ícone": "TERRAZZA FEIRA SPE LTDA", "Balena": "TERRAZZA BALENA SPE LTDA", "Carozzo Wellness": "CAROZZO WELLNESS JARDIM ARMAÇÃO LTDA"}
+        for i, r in enumerate(grade[:40]):
+            nome = r[0] if r else None
+            if nome not in rot: continue
+            rd = next((x for x in range(i + 1, min(i + 4, len(grade))) if any(isinstance(v, datetime.datetime) for v in grade[x])), None)
+            if rd is None or rd + 1 >= len(grade): continue
+            for c, d in enumerate(grade[rd]):
+                v = grade[rd + 1][c] if c < len(grade[rd + 1]) else None
+                if isinstance(d, datetime.datetime) and v not in (None, ""):
+                    sem[d.date().isoformat()][rot[nome]] = round(_f(v) * 1000, 2)
+    grupos = []
+    for d in sorted(sem):
+        dd = datetime.date.fromisoformat(d)
+        if grupos and (dd - grupos[-1][0]).days <= 3: grupos[-1][1].append(d)
+        else: grupos.append([dd, [d]])
+    semanal = []
+    for _, ds in grupos:
+        v = {}
+        for d in ds: v.update(sem[d])
+        semanal.append({"data": max(ds), "valores": v})
+    wb.close()
+    return {"atual": atual, "anterior": anterior, "tratados": trat, "posicao": posicao, "semanal": semanal}
+
+
+# ============ 5. Monta as duas visões: automática (Sienge) e planilha ============
+def dias_ajustado(lst):
     maior = defaultdict(int)
-    for r in candidatos:
-        maior[r["cd_cliente"]] = max(maior[r["cd_cliente"]], r["dias"])
-    base = []
-    for r in candidatos:
-        if maior[r["cd_cliente"]] > REGRA:
-            r = dict(r, dias_aj=maior[r["cd_cliente"]], subjudice=chave(r["documento"], "").split("|")[0] in subj)
-            base.append(r)
-    base.sort(key=lambda r: (r["empresa"], r["cliente"], r["venc"]))
-    fora_regra = sorted({r["cliente"] for r in candidatos if maior[r["cd_cliente"]] <= REGRA})
+    for r in lst: maior[r["cd_cliente"]] = max(maior[r["cd_cliente"]], r["dias"])
+    for r in lst: r["dias_aj"] = maior[r["cd_cliente"]]
 
-    # retratos: o desta semana (sobrescreve se rodar de novo no mesmo dia) e o anterior
-    gravar_json(DADOS / "retratos" / f"{data_base.isoformat()}.json", {"data": data_base.isoformat(), "titulos": base})
-    anteriores = sorted(p for p in (DADOS / "retratos").glob("*.json") if p.stem < data_base.isoformat())
-    ant = ler_json(anteriores[-1], {"data": None, "titulos": []}) if anteriores else {"data": None, "titulos": []}
-    # sub judice na semana anterior: o mesmo documento que está sub judice hoje já era sub judice antes
-    # (a marcação pode não ter sido feita na semana anterior); assim a comparação fica justa
-    for t in ant["titulos"]:
-        t["subjudice"] = bool(t.get("subjudice")) or chave(t["documento"], "").split("|")[0] in subj
 
-    # Sienge completo (o serviço usa para registrar um título nos Tratados com os dados do dia)
-    gravar_json(DADOS / "sienge_atual.json", {"data": data_base.isoformat(), "titulos": {r["chave"]: r for r in sienge}})
+def enxuto(r):
+    return {k: r[k] for k in ("chave", "venc", "cliente", "cd_cliente", "documento", "titulo", "parc", "tc", "unid",
+                              "valor_original", "total", "dias", "dias_aj", "empresa", "subjudice") if k in r}
 
-    # Tratados: ainda no Sienge = aguardando compensação; saiu do Sienge = compensado (ou distrato concluído)
-    no_sienge = {r["chave"] for r in sienge}
-    caixa = {s["status"]: s["caixa"] for s in cfg["status_tratados"]}
-    trat_out = []
-    for t in tratados:
-        trat_out.append(dict(t, caixa=caixa.get(t.get("status") or "", "Sem status"), no_sienge=t["chave"] in no_sienge))
 
-    # histórico semanal (R$ por empresa)
-    semanal = ler_json(DADOS / "semanal.json", [])
+def com_semana(hist, data, base):
     tot = defaultdict(float)
-    for r in base:
-        tot[r["empresa"]] += r["total"]
-    semanal = [s for s in semanal if s["data"] != data_base.isoformat()] + [{"data": data_base.isoformat(), "valores": {k: round(v, 2) for k, v in tot.items()}}]
-    semanal.sort(key=lambda s: s["data"])
-    gravar_json(DADOS / "semanal.json", semanal)
+    for r in base: tot[r["empresa"]] += r["total"]
+    h = [x for x in hist if x["data"] != data] + [{"data": data, "valores": {k: round(v, 2) for k, v in tot.items()}}]
+    return sorted(h, key=lambda x: x["data"])
 
+
+def desambiguar(lst):
+    """O Sienge às vezes repete Documento + Parcela em títulos diferentes (ex.: duas parcelas "1/1" do mesmo contrato com
+    vencimentos diferentes). Nesses casos a chave ganha o vencimento, para um não sumir no lugar do outro."""
+    for t in lst: t["chave"] = t["chave"].split("#")[0]
+    n = defaultdict(int)
+    for t in lst: n[t["chave"]] += 1
+    for t in lst:
+        if n[t["chave"]] > 1: t["chave"] += "#" + str(t.get("venc"))
+    return lst
+
+
+def montar():
+    doc = lambda t: chave(t["documento"], "").split("|")[0]
+    usa_plan = bool(cfg.get("pasta_planilha"))
+    trat_painel = [t for t in ler_json(DADOS / "tratados.json", []) if not (usa_plan and t.get("origem") == "planilha")]
+    cob, f_cob = None, achar_cobranca()
+    if f_cob: cob = ler_cobranca(f_cob)
+    else: avisos.append("Não achei o PDF de Títulos em Cobrança na pasta de entrada.")
+    if not cob: cob = {"arquivo": None, "data": None, "status": {}, "subjudice_docs": [], "datas_estranhas": []}
+    try: f_csv = achar_csv()
+    except SystemExit: f_csv = None
+    sienge = desambiguar(ler_csv(f_csv)) if f_csv else []
+    plan = achar_planilha() if usa_plan else None
+    P = ler_planilha(plan[0]) if plan else None
+    if P:
+        for k in ("atual", "anterior", "tratados"): desambiguar(P[k])
+    if usa_plan and not plan: avisos.append("Não achei a planilha de inadimplência na pasta configurada: só a visão automática (Sienge).")
+    if not f_csv and not P: sys.exit("Não achei o CSV do Contas a Receber nem a planilha de inadimplência.")
+
+    # ---- Tratados: aba Tratados da planilha + classificados pelo painel (o painel vale por cima) ----
+    por_chave = {t["chave"]: t for t in (P["tratados"] if P else [])}
+    for t in trat_painel: por_chave[t["chave"]] = t
+    tratados = list(por_chave.values())
+    k_trat, k_painel = set(por_chave), {t["chave"] for t in trat_painel}
+
+    # ---- Sub judice: PDF de cobrança OU marcado "Sim" na planilha (vale para as duas visões e para a semana anterior) ----
+    subj = set(cob["subjudice_docs"])
+    if P: subj |= {doc(t) for t in P["atual"] + P["anterior"] if t.get("subj_planilha")}
+
+    # ---- Status da cobrança: PDF e Base Posição Clientes; vale o lançamento mais recente ----
+    status = dict(cob["status"])
+    if P:
+        cd_por_nome = {t["cliente"].upper(): t["cd_cliente"] for t in P["atual"] + P["anterior"] + tratados + sienge}
+        for nome, st in P["posicao"].items():
+            cd = cd_por_nome.get(nome)
+            if cd and (cd not in status or st["data"] >= status[cd]["data"]): status[cd] = st
+    cob["status"] = status
+
+    visoes, fora_regra = {}, []
+    hist_plan = P["semanal"] if P else []
+
+    # ---- visão automática: CSV do Sienge + regra dos 10 dias, sem os Tratados ----
+    if f_csv:
+        data_base = data_do_arquivo(f_csv)
+        cand = [r for r in sienge if r["venc"] <= data_base.isoformat() and r["chave"] not in k_trat]
+        maior = defaultdict(int)
+        for r in cand: maior[r["cd_cliente"]] = max(maior[r["cd_cliente"]], r["dias"])
+        base = [dict(r, subjudice=doc(r) in subj) for r in cand if maior[r["cd_cliente"]] > REGRA]
+        fora_regra = sorted({r["cliente"] for r in cand if maior[r["cd_cliente"]] <= REGRA})
+        anteriores = sorted(p for p in (DADOS / "retratos").glob("*.json") if p.stem < data_base.isoformat())
+        ant = ler_json(anteriores[-1], {"data": None, "titulos": []}) if anteriores else {"data": None, "titulos": []}
+        desambiguar(ant["titulos"])
+        for t in ant["titulos"]: t["subjudice"] = bool(t.get("subjudice")) or doc(t) in subj
+        dias_ajustado(base); dias_ajustado(ant["titulos"])
+        base.sort(key=lambda r: (r["empresa"], r["cliente"], r["venc"]))
+        gravar_json(DADOS / "retratos" / f"{data_base.isoformat()}.json", {"data": data_base.isoformat(), "titulos": base})
+        gravar_json(DADOS / "sienge_atual.json", {"data": data_base.isoformat(), "titulos": {r["chave"]: r for r in sienge}})
+        hist = hist_plan or ler_json(DADOS / "semanal.json", [])
+        semanal = com_semana(hist, data_base.isoformat(), base)
+        gravar_json(DADOS / "semanal.json", semanal)
+        visoes["sienge"] = {"rotulo": "Automática (Sienge)", "fonte": f"{f_csv.name} · Contas a Receber do Sienge, regra dos {REGRA} dias",
+                            "data_base": data_base.isoformat(), "data_anterior": ant["data"],
+                            "titulos": [enxuto(r) for r in base], "anterior": [enxuto(r) for r in ant["titulos"]], "semanal": semanal}
+
+    # ---- visão planilha: abas Base Atual e Base Anterior da planilha mais recente ----
+    if P:
+        f_plan, d_plan, d_ant = plan
+        base = [dict(t, subjudice=doc(t) in subj) for t in P["atual"] if t["chave"] not in k_painel]
+        ant_t = [dict(t, subjudice=doc(t) in subj) for t in P["anterior"]]
+        dias_ajustado(base); dias_ajustado(ant_t)
+        base.sort(key=lambda r: (r["empresa"], r["cliente"], r["venc"]))
+        visoes["planilha"] = {"rotulo": "Planilha", "fonte": f"{f_plan.name} · abas Base Atual e Base Anterior",
+                              "data_base": d_plan.isoformat(), "data_anterior": d_ant.isoformat() if d_ant else None,
+                              "titulos": [enxuto(r) for r in base], "anterior": [enxuto(r) for r in ant_t],
+                              "semanal": com_semana(hist_plan, d_plan.isoformat(), base)}
+
+    # Tratados: ainda no Contas a Receber = aguardando compensação; saiu = compensado (sem o CSV, fica aguardando)
+    no_sienge = {r["chave"] for r in sienge}
+    caixa = {x["status"]: x["caixa"] for x in cfg["status_tratados"]}
+    trat_out = [dict(t, caixa=caixa.get(t.get("status") or "", "Sem status"), no_sienge=(t["chave"] in no_sienge) if sienge else True)
+                for t in tratados]
+
+    todos = [t for v in visoes.values() for t in v["titulos"] + v["anterior"]]
     emps_cfg = cfg["empreendimentos"]
-    conhecidas = {e["empresa"] for e in emps_cfg}
-    extras = sorted({r["empresa"] for r in base + ant["titulos"]} - conhecidas)
+    extras = sorted({r["empresa"] for r in todos} - {e["empresa"] for e in emps_cfg})
     empreendimentos = [{"nome": e["nome"], "empresa": e["empresa"]} for e in emps_cfg] + [{"nome": x.title(), "empresa": x} for x in extras]
-
-    enxuto = lambda r: {k: r[k] for k in ("chave", "venc", "cliente", "cd_cliente", "documento", "titulo", "parc", "tc", "unid",
-                                         "valor_original", "total", "dias", "dias_aj", "empresa", "subjudice") if k in r}
+    padrao = "sienge" if "sienge" in visoes else "planilha"
+    v0 = visoes[padrao]
     return {
         "gerado_em": datetime.datetime.now().isoformat(timespec="seconds"),
-        "data_base": data_base.isoformat(), "data_anterior": ant["data"], "regra_dias": REGRA,
+        "visoes": visoes, "visao_padrao": padrao,
+        # campos da visão padrão (compatibilidade e resumo no console)
+        "data_base": v0["data_base"], "data_anterior": v0["data_anterior"], "titulos": v0["titulos"], "anterior": v0["anterior"],
+        "semanal": v0["semanal"], "regra_dias": REGRA,
         "empreendimentos": empreendimentos,
-        "titulos": [enxuto(r) for r in base],
-        "anterior": [enxuto(r) for r in ant["titulos"]],
         "tratados": trat_out,
         "status_tratados": cfg["status_tratados"],
-        "cobranca": ({"arquivo": cob["arquivo"], "data": cob["data"], "status": cob["status"],
-                      "subjudice_docs": cob["subjudice_docs"], "datas_estranhas": cob["datas_estranhas"]} if cob else None),
+        "cobranca": {"arquivo": cob["arquivo"], "data": cob["data"], "status": cob["status"],
+                     "subjudice_docs": sorted(subj), "datas_estranhas": cob["datas_estranhas"]},
         "esperado": esperado_por_mes(),
         "fechamentos": ler_json(DADOS / "fechamentos.json", []),
-        "semanal": semanal,
         "fora_regra": fora_regra,
-        "fontes": {"contas_receber": f_csv.name, "cobranca": f_cob.name if f_cob else None},
+        "fontes": {"contas_receber": v0["fonte"], "cobranca": f_cob.name if f_cob else None},
         "avisos": avisos,
     }
 
 
-# ============ 5. Criptografia ============
+# ============ 6. Criptografia ============
 def ler_senha():
     a = AQUI / "senha.txt"
     s = a.read_text(encoding="utf-8-sig").strip() if a.exists() else ""
@@ -334,7 +485,8 @@ def ler_senha():
 
 
 def assinatura():
-    arqs = listar(ENTRADA, "*.*") + listar(BOLETAGEM, "*.pdf", True) + \
+    pl = caminho(cfg["pasta_planilha"]) if cfg.get("pasta_planilha") else None
+    arqs = listar(ENTRADA, "*.*") + listar(BOLETAGEM, "*.pdf", True) + (listar(pl, cfg.get("padrao_planilha", "Inadimpl*Carozzo*.xlsx")) if pl else []) + \
         [DADOS / n for n in ("tratados.json", "fechamentos.json", "esperado_manual.json") if (DADOS / n).exists()] + [AQUI / "config.json"]
     return hashlib.sha256("|".join(sorted(f"{f}:{f.stat().st_mtime}" for f in arqs)).encode()).hexdigest()
 
@@ -358,7 +510,9 @@ if __name__ == "__main__":
     arq_assin.write_text(assin)
 
     # resumo no console
-    print(f"Base: {dados['fontes']['contas_receber']} (data {dados['data_base']}); semana anterior: {dados['data_anterior'] or '-'}")
+    print(f"Base: {dados['fontes']['contas_receber']} - data {dados['data_base']}; semana anterior: {dados['data_anterior'] or '-'}")
+    for k, v in dados["visoes"].items():
+        print(f"  visão {v['rotulo']:<22} data {v['data_base']}  {len(v['titulos']):4d} títulos  R$ {sum(r['total'] for r in v['titulos']):14,.2f}  (anterior {v['data_anterior']}: R$ {sum(r['total'] for r in v['anterior']):,.2f})")
     tot = defaultdict(lambda: [0, 0.0])
     for r in dados["titulos"]:
         tot[r["empresa"]][0] += 1; tot[r["empresa"]][1] += r["total"]
