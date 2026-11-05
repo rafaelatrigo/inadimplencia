@@ -629,13 +629,22 @@ function renderTipo(){
   $("tTipo").innerHTML=`<thead><tr><th>Tipo</th><th>Atual</th><th>Anterior</th><th>Δ</th><th>Δ %</th><th>Qtd</th></tr></thead><tbody>${lin.map(l=>r(`${esc(TIPOS[l.tc]||l.tc)} <span class="tag">${esc(l.tc)}</span>`,l.a,l.b)).join("")}${r("Total",a,b,"tot")}</tbody>`;
 }
 function porCliente(arr){const m=new Map(); arr.forEach(t=>{const k=t.cd_cliente; if(!m.has(k)) m.set(k,{cd:k,nome:t.cliente,emp:new Set(),tit:[]}); const o=m.get(k); o.emp.add(t.empresa); o.tit.push(t);}); return m;}
+let TOPSORT={k:"atraso",dir:-1};   /* padrão: maior atraso primeiro */
 function renderTop(){
   const a=porCliente(AT()), b=porCliente(AN());
-  const L=[...a.values()].map(o=>({...o,v:soma(o.tit),vb:b.has(o.cd)?soma(b.get(o.cd).tit):0})).sort((x,y)=>y.v-x.v);
-  $("topSub").textContent=`${L.length} clientes, do maior para o menor saldo · atual × semana anterior · último status do relatório de Títulos em Cobrança`;
-  $("tTop").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th>Atual</th><th>Anterior</th><th>Δ</th><th>Títulos</th><th>Maior atraso</th><th class="l">Status da cobrança</th></tr></thead><tbody>`+
-    L.map((o,i)=>{const s=statusCli(o.cd), sj=o.tit.some(t=>t.subjudice);
-      return `<tr><td>${i+1}</td><td class="cl">${esc(o.nome)} ${sj?'<span class="tag sj">sub judice</span>':""}<span class="mini">${[...o.emp].map(e=>esc(nomeE(e))).join(", ")} · ${new Set(o.tit.map(t=>t.unid)).size} unid.</span></td><td>${fmtN(o.v)}</td><td>${o.vb?fmtN(o.vb):"novo"}</td>${o.vb?dV(o.v,o.vb):"<td></td>"}<td>${o.tit.length}</td><td>${Math.max(...o.tit.map(t=>t.dias_aj))} dias</td><td class="wrap">${s?`<b>${fmtD(s.data)}</b> · ${esc(s.texto)}`:"—"}</td></tr>`;}).join("")+"</tbody>";
+  const L=[...a.values()].map(o=>{const s=statusCli(o.cd), v=soma(o.tit), vb=b.has(o.cd)?soma(b.get(o.cd).tit):0;
+    return {...o,v,vb,delta:vb?v-vb:null,n:o.tit.length,atraso:Math.max(...o.tit.map(t=>t.dias_aj)),st:s,stData:s?s.data:"",emps:[...o.emp].map(nomeE).join(", ")};});
+  const val={cliente:o=>o.nome.toLowerCase(),emp:o=>o.emps,atual:o=>o.v,anterior:o=>o.vb,delta:o=>o.delta??-Infinity,n:o=>o.n,atraso:o=>o.atraso,status:o=>o.stData};
+  const f=val[TOPSORT.k];
+  L.sort((x,y)=>{const p=f(x),q=f(y); const c=(typeof p==="string"?p.localeCompare(q,"pt-BR"):p-q); return c*TOPSORT.dir||y.atraso-x.atraso||y.v-x.v;});
+  const nomes={cliente:"cliente",atual:"saldo atual",anterior:"saldo anterior",delta:"variação",n:"quantidade de títulos",atraso:"maior atraso",status:"data do último status"};
+  $("topSub").textContent=`${L.length} clientes · ordenado por ${nomes[TOPSORT.k]} (${TOPSORT.dir<0?(TOPSORT.k==="cliente"?"Z→A":"maior primeiro"):(TOPSORT.k==="cliente"?"A→Z":"menor primeiro")}) · clique no título de uma coluna para ordenar por ela · último status do relatório de Títulos em Cobrança`;
+  const th=(k,txt,cls="")=>`<th class="${cls}" data-sort="${k}" style="cursor:pointer;user-select:none" title="Ordenar por ${nomes[k]}">${txt}${TOPSORT.k===k?(TOPSORT.dir<0?" ▼":" ▲"):""}</th>`;
+  $("tTop").innerHTML=`<thead><tr><th>#</th>${th("cliente","Cliente","l")}${th("atual","Atual")}${th("anterior","Anterior")}${th("delta","Δ")}${th("n","Títulos")}${th("atraso","Maior atraso")}${th("status","Status da cobrança","l")}</tr></thead><tbody>`+
+    L.map((o,i)=>{const s=o.st, sj=o.tit.some(t=>t.subjudice);
+      return `<tr><td>${i+1}</td><td class="cl">${esc(o.nome)} ${sj?'<span class="tag sj">sub judice</span>':""}<span class="mini">${esc(o.emps)} · ${new Set(o.tit.map(t=>t.unid)).size} unid.</span></td><td>${fmtN(o.v)}</td><td>${o.vb?fmtN(o.vb):"novo"}</td>${o.vb?dV(o.v,o.vb):"<td></td>"}<td>${o.n}</td><td>${o.atraso} dias</td><td class="wrap">${s?`<b>${fmtD(s.data)}</b> · ${esc(s.texto)}`:"—"}</td></tr>`;}).join("")+"</tbody>";
+  $("tTop").querySelectorAll("th[data-sort]").forEach(h=>h.onclick=()=>{const k=h.dataset.sort;
+    TOPSORT=TOPSORT.k===k?{k,dir:-TOPSORT.dir}:{k,dir:(k==="cliente"?1:-1)}; renderTop();});
 }
 
 /* ---------- recuperação de crédito ---------- */
