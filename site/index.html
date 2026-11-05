@@ -445,10 +445,10 @@ function mesesRef(){
 }
 function aplicarVisao(){
   if(!D.visoes) return;
-  if(!VIEW||!D.visoes[VIEW]) VIEW=D.visao_padrao;
+  VIEW=D.visao_padrao;   /* uma base só: a automática do Sienge (a planilha entra nos Tratados, status, sub judice e na conferência) */
   const v=D.visoes[VIEW]; Object.assign(D,{titulos:v.titulos,anterior:v.anterior,data_base:v.data_base,data_anterior:v.data_anterior,semanal:v.semanal});
   D.fontes.contas_receber=v.fonte;
-  const ks=Object.keys(D.visoes); $("secVis").classList.toggle("hidden",ks.length<2); $("fVis").className="fgrid";
+  const ks=Object.keys(D.visoes); $("secVis").classList.add("hidden"); $("fVis").className="fgrid";
   $("fVis").innerHTML=ks.map(k=>`<button type="button" class="fbtn" aria-pressed="${k===VIEW}">${esc(D.visoes[k].rotulo)}<span class="mini" style="margin-left:auto">${fmtD(D.visoes[k].data_base).slice(0,5)}</span></button>`).join("");
   $("fVis").querySelectorAll("button").forEach((b,i)=>b.onclick=()=>{ if(ks[i]===VIEW) return; VIEW=ks[i]; try{localStorage.setItem("inad-visao",VIEW)}catch(e){} init(); });
 }
@@ -459,7 +459,7 @@ function init(){
   if(!MESREF||!ms.includes(MESREF)) MESREF=ms.includes(padrao)?padrao:ms[ms.length-1];
   $("mesRef").innerHTML=ms.map(m=>`<option value="${m}" ${m===MESREF?"selected":""}>${mesL(m)}</option>`).join("");
   $("mesRef").onchange=e=>{MESREF=e.target.value; renderPct(); renderResumo();};
-  $("stamp").innerHTML=`${D.visoes?esc(D.visoes[VIEW].rotulo)+" · ":""}${fmtD(D.data_base)} × ${fmtD(D.data_anterior)}<br>Gerado em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}`;
+  $("stamp").innerHTML=`Relatório de ${fmtD(D.data_base)} · anterior ${fmtD(D.data_anterior)}<br>Gerado em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}`;
   $("fStatus").innerHTML=`<option value="">Todos os status</option>`+D.status_tratados.map(s=>`<option>${esc(s.status)}</option>`).join("")+`<option value="(sem)">Sem status</option>`;
   $("fStatus").onchange=renderTrat; $("qt").oninput=renderTrat; $("q").oninput=renderBase;
   $("fontes").textContent=`Fontes: base ${D.fontes.contas_receber}; sub judice e status complementados pelo relatório de Títulos em Cobrança ${D.fontes.cobranca||"—"}; recebimento esperado pelos relatórios enviados ao BPO. Dados criptografados.`;
@@ -694,7 +694,7 @@ function renderAvisos(){
 }
 /* ---------- conferência entre as duas bases ---------- */
 function renderConf(){
-  const ok=D.visoes&&D.visoes.sienge&&D.visoes.planilha;
+  const ok=false;   /* conferência desativada a pedido */
   $("cConf").classList.toggle("hidden",!ok); $("navConf").classList.toggle("hidden",!ok); if(!ok) return;
   const S=D.visoes.sienge.titulos.filter(okE), Pl=D.visoes.planilha.titulos.filter(okE);
   const ds=D.visoes.sienge.data_base, dp=D.visoes.planilha.data_base;
