@@ -224,9 +224,9 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <div class="fsec hidden" id="secVis"><h3>Base</h3><div id="fVis"></div></div>
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Ir para</h3><nav class="nav">
-        <a href="#cRes">Resumo da semana</a><a href="#cConf" id="navConf">Conferência Sienge × planilha</a><a href="#cEmp">Por empreendimento</a><a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a>
+        <a href="#cRes">Resumo da semana</a><a href="#cRec">Recuperação de crédito</a><a href="#cConf" id="navConf">Conferência Sienge × planilha</a><a href="#cEmp">Por empreendimento</a><a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a>
         <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Clientes inadimplentes</a>
-        <a href="#cRec">Recuperação de crédito</a><a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a></nav></div>
+        <a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a></nav></div>
     </details>
   </aside>
   <main>
@@ -236,6 +236,12 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <p class="resumo" id="resTxt"></p>
       <div class="scroll" style="max-height:none"><table id="tRes1" class="cmp"></table></div>
       <p class="foot">▼ queda (bom: saldo/títulos reduzidos) · ▲ alta (atenção: saldo/títulos aumentaram)</p>
+    </section>
+    <section class="card" id="cRec">
+      <h2>Recuperação de crédito · comparativo semanal</h2>
+      <p class="sub" id="recSub"></p>
+      <section class="tiles" id="recTiles" style="margin-bottom:12px"></section>
+      <div class="scroll"><table id="tRec" class="cmp"></table></div>
     </section>
     <section class="card hidden" id="cConf">
       <h2>Conferência · Sienge × planilha</h2>
@@ -287,12 +293,6 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <div class="scroll" style="max-height:620px"><table id="tTop" class="cmp"></table></div>
     </section>
 
-    <section class="card" id="cRec">
-      <h2>Recuperação de crédito · comparativo semanal</h2>
-      <p class="sub" id="recSub"></p>
-      <section class="tiles" id="recTiles" style="margin-bottom:12px"></section>
-      <div class="scroll"><table id="tRec" class="cmp"></table></div>
-    </section>
 
     <section class="card" id="cBase">
       <h2>Títulos inadimplentes</h2>

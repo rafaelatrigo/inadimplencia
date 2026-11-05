@@ -290,9 +290,11 @@ def copia_planilha(f):
         try:
             shutil.copyfile(f, destino)
             gravar_json(DADOS / "planilha_ultima_lida.json", {"arquivo": f.name, "lida_em": datetime.datetime.now().isoformat(timespec="seconds")})
+            (DADOS / ".planilha_bloqueada").unlink(missing_ok=True)
             return destino
         except PermissionError:
             time.sleep(3)
+    (DADOS / ".planilha_bloqueada").write_text(f.name)     # o serviço tenta de novo a cada 3 minutos até conseguir ler
     info = ler_json(DADOS / "planilha_ultima_lida.json", None)
     if destino.exists() and info:
         avisos.append(f"A planilha {f.name} estava bloqueada (aberta no Excel ou sincronizando no OneDrive). "
