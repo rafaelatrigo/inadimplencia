@@ -181,6 +181,10 @@ table.cmp{font-size:13px}
 #tPct th{position:static}
 .scroll{overflow-x:auto;overflow-y:auto}
 .nav a{border-left:3px solid transparent}
+#recTiles{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+#recTiles .tile{padding:8px 10px}
+@media (max-width:900px){#recTiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){#recTiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .resumo{font-size:15px;line-height:1.6;margin:4px 0 14px;color:var(--text)}
 .resumo b{font-weight:650}
 .resumo .up,.resumo .down{font-weight:650}
@@ -240,7 +244,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
     <section class="card" id="cRec">
       <h2>Recuperação de crédito · comparativo semanal</h2>
       <p class="sub" id="recSub"></p>
-      <section class="tiles" id="recTiles" style="margin-bottom:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"></section>
+      <section class="tiles" id="recTiles" style="margin-bottom:12px"></section>
       <div class="scroll"><table id="tRec" class="cmp"></table></div>
     </section>
     <section class="card hidden" id="cConf">
@@ -627,10 +631,10 @@ function renderRec(){
   $("recSub").innerHTML=`<b>Recuperado</b> = títulos que estavam na base de ${fmtD(D.data_anterior)}, saíram da base de ${fmtD(D.data_base)} e <b>não</b> foram tratados. Os Tratados não-distrato ficam como <b>aguardando compensação</b> enquanto o título ainda estiver no Contas a Receber do Sienge.`;
   const V=v=>`${fmtMil(v)}<small>R$ mil</small>`;
   $("recTiles").innerHTML=`
-   <div class="tile"><div class="k">Total recuperado na semana</div><div class="v">${V(sr)}</div><div class="s">${rec.length} títulos</div></div>
+   <div class="tile"><div class="k">Recuperado na semana</div><div class="v">${V(sr)}</div><div class="s">${rec.length} títulos</div></div>
    <div class="tile" title="Recuperado ÷ saldo da semana anterior"><div class="k">% recuperação</div><div class="v">${fmtP(sb?sr/sb:null)}</div><div class="s">do saldo de ${fmtD(D.data_anterior).slice(0,5)}</div></div>
    <div class="tile"><div class="k">Clientes regularizados</div><div class="v">${new Set(rec.map(t=>t.cd_cliente)).size}</div><div class="s">com título recuperado</div></div>
-   <div class="tile" title="Tratados com status Pagamento em Trânsito que ainda estão no Contas a Receber do Sienge"><div class="k">Pagamento em trânsito</div><div class="v">${V(soma(pt))}</div><div class="s">${pt.length} títulos aguardando compensação</div></div>
+   <div class="tile" title="Tratados com status Pagamento em Trânsito que ainda estão no Contas a Receber do Sienge"><div class="k">Pagamento em trânsito</div><div class="v">${V(soma(pt))}</div><div class="s">${pt.length} títulos</div></div>
    <div class="tile" title="Tratados com status Renegociação que ainda estão no Contas a Receber do Sienge"><div class="k">Renegociação</div><div class="v">${V(soma(rn))}</div><div class="s">${rn.length} títulos${outros.length?` · outros: R$ ${fmtMil(soma(outros))} mil (${outros.length})`:""}</div></div>
    <div class="tile"><div class="k">Distrato</div><div class="v">${V(soma(dist))}</div><div class="s">${dist.length} títulos${sem.length?` · <span class="alerta warn">${sem.length} sem status</span>`:""}</div></div>`;
   $("tRec").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Valor recuperado</th><th>% do total</th><th>% do cliente</th></tr></thead><tbody>`+
