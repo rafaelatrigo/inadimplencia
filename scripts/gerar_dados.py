@@ -14,6 +14,7 @@ De onde vem cada número (pastas em scripts/config.json):
 - RECEBIMENTO ESPERADO: os PDFs "Contas a Receber (por Data de Vencimento)" enviados ao BPO, em pasta_boletagem
   (um por empresa e mês, coluna Total, "Total da empresa"). Clientes em esperado_excluir_clientes saem do total.
   Meses antigos sem PDF vêm de dados/esperado_manual.json.
+- ANTECIPAÇÕES: Relatório de Antecipações/Inadimplências do Sienge (XLSX) em pasta_antecipacoes; ver antecipacoes.py.
 - SEMANA ANTERIOR: o retrato salvo na semana anterior (dados/retratos/AAAA-MM-DD.json).
 
 Opções:  --se-mudou   só gera se algum arquivo de entrada, os Tratados ou os fechamentos mudaram
@@ -21,6 +22,7 @@ Opções:  --se-mudou   só gera se algum arquivo de entrada, os Tratados ou os 
 import sys, json, csv, re, datetime, pathlib, os, base64, hashlib, getpass, unicodedata
 from collections import defaultdict
 from comum import AQUI, RAIZ, cfg as ler_cfg, caminho, pasta_dados, ler_json, gravar_json, parc_texto, chave, num_br
+from antecipacoes import montar_antecipacoes
 
 try:
     import pdfplumber
@@ -555,6 +557,7 @@ def montar():
         "cobranca": {"arquivo": cob["arquivo"], "data": cob["data"], "status": cob["status"],
                      "subjudice_docs": sorted(subj), "datas_estranhas": cob["datas_estranhas"]},
         "esperado": esperado_por_mes(),
+        "antecipacoes": montar_antecipacoes(cfg, DADOS, empreendimentos, avisos),
         "fechamentos": ler_json(DADOS / "fechamentos.json", []),
         "fora_regra": fora_regra,
         "em_tratamento": {"atual": trat_atual, "anterior": trat_ant},
@@ -577,7 +580,9 @@ def ler_senha():
 def assinatura():
     pl = caminho(cfg["pasta_planilha"]) if cfg.get("pasta_planilha") else None
     arqs = listar(ENTRADA, "*.*") + listar(BOLETAGEM, "*.pdf", True) + (listar(pl, cfg.get("padrao_planilha", "Inadimpl*Carozzo*.xlsx")) if pl else []) + \
-        [DADOS / n for n in ("tratados.json", "fechamentos.json", "esperado_manual.json") if (DADOS / n).exists()] + [AQUI / "config.json"]
+        listar(caminho(cfg.get("pasta_antecipacoes", "entrada/antecipacoes")), "*.xlsx") + \
+        [DADOS / n for n in ("tratados.json", "fechamentos.json", "esperado_manual.json", "antecipacoes_historico.json", "antecipacoes_manual.json")
+         if (DADOS / n).exists()] + [AQUI / "config.json"]
     return hashlib.sha256("|".join(sorted(f"{f}:{f.stat().st_mtime}" for f in arqs)).encode()).hexdigest()
 
 
@@ -612,6 +617,8 @@ if __name__ == "__main__":
     print(f"Tratados: {len(dados['tratados'])} · Sub judice: {len(dados['cobranca']['subjudice_docs']) if dados['cobranca'] else '-'}")
     for e, ms in dados["esperado"].items():
         print(f"  esperado {e[:30]:<30} " + "  ".join(f"{m}: {v['valor']:,.2f}" for m, v in sorted(ms.items())))
+    for e in dados["antecipacoes"]["empresas"]:
+        print(f"  antecipações {e['nome']:<18} " + "  ".join(f"{m[2:]}: {(v['pago'] or 0)/1000:,.1f}" for m, v in e["meses"].items()))
     for a in avisos:
         print("AVISO:", a)
     print("OK: site/data/painel.enc.json gerado.")

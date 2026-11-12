@@ -68,5 +68,8 @@
   "considerar_subjudice": false,
   "excluir_tc": [
     "AT"
-  ]
+  ],
+  "pasta_antecipacoes": "entrada/antecipacoes",
+  "antecipacao_meses": 2,
+  "antecipacao_inicio": "2025-08"
 }

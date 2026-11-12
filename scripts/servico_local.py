@@ -12,7 +12,7 @@ Os dados editados ficam na pasta de dados (config.json > pasta_dados), NUNCA no 
 Só aceita chamadas deste computador (127.0.0.1) e do endereço do painel definido em config.json.
 Registro em: atualizacao.log (pasta do painel).
 """
-import json, sys, os, time, threading, subprocess, datetime
+import json, sys, os, re, time, threading, subprocess, datetime
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from comum import AQUI, RAIZ, cfg, caminho, pasta_dados, ler_json, gravar_json
 
@@ -129,11 +129,28 @@ def fechamento(corpo):
     log(f"Fechamento {corpo['mes']} registrado")
 
 
+def antecipacao(corpo):
+    """corpo = {"empresa", "mes": "AAAA-MM", "valor": número ou null}: linha "A pagar" da aba Antecipações."""
+    emp, mes = corpo.get("empresa"), corpo.get("mes", "")
+    if not emp or not re.match(r"^\d{4}-\d{2}$", mes): raise ValueError("Informe empresa e mês.")
+    v = corpo.get("valor")
+    if v not in (None, ""): v = round(float(v), 2)
+    dados = pasta_dados()
+    with trava_dados:
+        m = ler_json(dados / "antecipacoes_manual.json", {})
+        e = m.setdefault(emp, {})
+        if v in (None, ""): e.pop(mes, None)
+        else: e[mes] = v
+        gravar_json(dados / "antecipacoes_manual.json", m)
+    log(f"Antecipações: A pagar {emp} {mes} = {v}")
+
+
 # ---------- observador das pastas ----------
 def assinatura_pastas(c):
     out = []
     fontes = [(caminho(c.get("pasta_entrada", "entrada")), "*.*", False),
-              (caminho(c.get("pasta_boletagem", "entrada/boletagem")), "*.pdf", True)]
+              (caminho(c.get("pasta_boletagem", "entrada/boletagem")), "*.pdf", True),
+              (caminho(c.get("pasta_antecipacoes", "entrada/antecipacoes")), "*.xlsx", False)]
     if c.get("pasta_planilha"):            # planilha de inadimplência no OneDrive: quando alguém salva, o painel atualiza
         fontes.append((caminho(c["pasta_planilha"]), c.get("padrao_planilha", "Inadimpl*Carozzo*.xlsx"), False))
     for pasta, padrao, rec in fontes:
@@ -207,6 +224,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path.startswith("/tratar"):
                 n = tratar(self.corpo()); publicar("Tratados pelo painel", so_se_mudou=False)
                 return self.responder(200, {"ok": True, "alterados": n, **estado})
+            if self.path.startswith("/antecipacao"):
+                antecipacao(self.corpo()); publicar("A pagar das antecipações", so_se_mudou=False)
+                return self.responder(200, {"ok": True, **estado})
             if self.path.startswith("/fechamento"):
                 fechamento(self.corpo()); publicar("fechamento mensal", so_se_mudou=False)
                 return self.responder(200, {"ok": True, **estado})

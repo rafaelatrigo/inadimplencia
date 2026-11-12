@@ -134,6 +134,14 @@ td.ind{padding-left:26px;color:var(--text-2)}
 .lock button{width:100%;padding:10px}
 .lock .msg{min-height:18px;margin-top:10px;font-size:13px;color:var(--crit)}
 .hidden{display:none!important}
+.abas{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:0 0 16px}
+.abas button{border:0;background:transparent;color:var(--text-2);font:inherit;font-size:14px;font-weight:600;padding:8px 16px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.abas button[aria-selected="true"]{color:var(--brand);border-bottom-color:var(--brand)}
+.abas button:hover{color:var(--text)}
+.antChart svg{display:block;width:100%;height:auto}
+.antTab th,.antTab td{padding:6px 5px;font-size:12.5px} .antTab td.zero{color:var(--muted)}
+.antTab th.pl{box-shadow:inset 0 -2px 0 var(--s3)}
+.antIn{width:68px;text-align:right;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit;font-size:12.5px}
 details.fbox>summary{display:none}
 @media (max-width:900px){
   .layout{grid-template-columns:minmax(0,1fr)}
@@ -227,14 +235,30 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <p style="margin:0 0 12px;font-size:12px;color:var(--muted)" id="dica">Clique para filtrar. Segure <b>Ctrl</b> e clique para selecionar mais de um.</p>
       <div class="fsec hidden" id="secVis"><h3>Base</h3><div id="fVis"></div></div>
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
-      <div class="fsec"><h3>Ir para</h3><nav class="nav">
+      <div class="fsec"><h3>Ir para</h3><nav class="nav" id="navAnt" style="display:none"><a href="#cAntRes">Resumo das antecipações</a><span id="navAntEmp" style="display:contents"></span><a href="#cAntTit">Parcelas antecipadas</a></nav><nav class="nav" id="navInad">
         <a href="#cRes">Resumo da semana</a><a href="#cRec">Recuperação de crédito</a><a href="#cConf" id="navConf">Conferência Sienge × planilha</a><a href="#cEmp">Por empreendimento</a><a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a>
         <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Clientes inadimplentes</a>
         <a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a></nav></div>
     </details>
   </aside>
   <main>
+    <div class="abas" role="tablist"><button type="button" role="tab" id="abaInad" aria-selected="true">Inadimplência</button><button type="button" role="tab" id="abaAnt" aria-selected="false">Antecipações</button></div>
     <div id="avisos"></div>
+    <div id="vAnt" class="hidden">
+    <section class="card" id="cAntRes" style="border-top:3px solid var(--brand)">
+      <h2>Antecipações de clientes</h2>
+      <p class="sub" id="antSub"></p>
+      <div class="scroll" style="max-height:none"><table id="tAntRes" class="cmp"></table></div>
+    </section>
+    <div id="antEmps"></div>
+    <section class="card" id="cAntTit">
+      <h2>Parcelas antecipadas (Sienge)</h2>
+      <p class="sub" id="antTitSub"></p>
+      <input class="search" id="qa" type="search" placeholder="Buscar cliente ou documento" aria-label="Buscar parcelas antecipadas">
+      <div class="scroll"><table id="tAntTit" class="cmp"></table></div>
+    </section>
+    </div>
+    <div id="vInad">
     <section class="card" id="cRes" style="border-top:3px solid var(--brand)">
       <h2 id="resTit">Resumo da semana</h2>
       <p class="resumo hidden" id="resTxt"></p>
@@ -318,6 +342,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <div class="scroll"><table id="tTrat" class="cmp"></table></div>
     </section>
 
+    </div>
     <p class="foot" id="fontes"></p>
   </main>
 </div>
@@ -474,7 +499,7 @@ function init(){
 window.addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>D&&renderSem(),120)});
 const AT=()=>D.titulos.filter(okE), AN=()=>D.anterior.filter(okE);
 const statusCli=cd=>(D.cobranca&&D.cobranca.status[cd])||null;
-function render(){renderResumo();renderConf();renderPct();renderSem();renderEmp();renderAging();renderTipo();renderTop();renderRec();renderBase();renderTrat();renderAvisos();}
+function render(){renderAnt();renderResumo();renderConf();renderPct();renderSem();renderEmp();renderAging();renderTipo();renderTop();renderRec();renderBase();renderTrat();renderAvisos();}
 
 /* ---------- quadros ---------- */
 function delta(a,b,fmt,menorMelhor=true){
@@ -741,6 +766,83 @@ function renderConf(){
     lista("Só na base automática do Sienge",soS,lin)+lista("Só na planilha",soP,lin)+
     lista("Mesmo título, valor diferente",dif,t=>`<tr><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>Sienge ${fmtN(t.total)}</td><td>Planilha ${fmtN(mp.get(t.chave).total)}</td></tr>`);
 }
+
+/* ---------- aba Antecipações ---------- */
+let ABA="inad"; try{ABA=localStorage.getItem("inad-aba")||"inad"}catch(e){}
+function mostrarAba(a){
+  ABA=a; try{localStorage.setItem("inad-aba",a)}catch(e){}
+  $("abaInad").setAttribute("aria-selected",a==="inad"); $("abaAnt").setAttribute("aria-selected",a==="ant");
+  $("vInad").classList.toggle("hidden",a!=="inad"); $("vAnt").classList.toggle("hidden",a!=="ant");
+  $("navInad").style.display=a==="inad"?"":"none"; $("navAnt").style.display=a==="ant"?"":"none";
+  if(a==="inad"&&D) renderSem();
+  if(a==="ant"&&D&&$("antC_0")) antEmpresas().forEach((e,i)=>graficoAnt(e,i));
+}
+$("abaInad").onclick=()=>mostrarAba("inad"); $("abaAnt").onclick=()=>mostrarAba("ant");
+const fmt0=v=>v==null?"—":Math.round(v)===0?"–":Math.round(v).toLocaleString("pt-BR");
+const antTot=x=>(x.pago||0)+(x.a_pagar||0);
+function antEmpresas(){ return ((D.antecipacoes||{}).empresas||[]).filter(e=>st.emps.includes(e.empresa)); }
+function renderAnt(){
+  const A=D.antecipacoes; mostrarAba(ABA);
+  if(!A){ $("antSub").textContent="Ainda sem dados de antecipações."; $("tAntRes").innerHTML=""; $("antEmps").innerHTML=""; $("tAntTit").innerHTML=""; return; }
+  const E=antEmpresas(), mAt=A.atualizado_ate.slice(0,7), mAnt=addMes(mAt,-1);
+  $("antSub").innerHTML=`Parcelas pagas com vencimento <b>${A.regra_meses} ou mais meses à frente</b> do mês do pagamento, no mês da baixa. Sienge até ${fmtD(A.atualizado_ate)}. Pago até o último mês da planilha de controle vem dela; depois, do Sienge. A pagar é lançado manualmente${EDITOR?" (edite direto na tabela de cada empreendimento)":""}.`;
+  const lin=E.map(e=>{const ms=Object.values(e.meses); return {e,at:e.meses[mAt]||{},an:e.meses[mAnt]||{},pago:soma(ms,x=>x.pago||0),ap:soma(ms,x=>x.a_pagar||0)};});
+  const T={pago:soma(lin,l=>l.pago),ap:soma(lin,l=>l.ap),at:soma(lin,l=>l.at.pago||0),an:soma(lin,l=>l.an.pago||0)};
+  const r=(n,cor,per,at,an,pg,ap,cls="")=>`<tr class="${cls}"><td>${cor?`<i class="sw" style="background:${cor};margin-right:6px;vertical-align:-1px"></i>`:""}${esc(n)}${per?`<span class="mini">${per}</span>`:""}</td><td>${fmtN(at)}</td><td>${fmtN(an)}</td><td>${fmtN(pg)}</td><td>${fmtN(ap)}</td><td><b>${fmtN(pg+ap)}</b></td></tr>`;
+  $("tAntRes").innerHTML=`<thead><tr><th class="l">Empreendimento</th><th>Pago em ${mesC(mAt)}</th><th>Pago em ${mesC(mAnt)}</th><th>Pago no período</th><th>A pagar no período</th><th>Total no período</th></tr></thead><tbody>`+
+    lin.map(l=>r(l.e.nome,corE(l.e.empresa),`${mesC(l.e.inicio)} a ${mesC(l.e.fim)}`,l.at.pago||0,l.an.pago||0,l.pago,l.ap)).join("")+
+    (lin.length>1?r("Total",null,"",T.at,T.an,T.pago,T.ap,"tot"):"")+"</tbody>";
+  $("navAntEmp").innerHTML=E.map(e=>`<a href="#ant_${E.indexOf(e)}">${esc(e.nome)}</a>`).join("");
+  $("antEmps").innerHTML=E.map((e,i)=>`<section class="card" id="ant_${i}"><h2>Antecipações · ${esc(e.nome)}</h2><p class="sub">${esc(subEmp(e))}</p>
+    <div class="scroll" style="max-height:none"><table class="cmp antTab" id="antT_${i}"></table></div>
+    <div class="legend" style="margin-top:12px"><span><i class="sw" style="background:${corE(e.empresa)}"></i>Pago</span><span><i class="sw" style="background:var(--s8)"></i>A pagar</span><span style="color:var(--muted)">R$ mil</span></div>
+    <div class="antChart" id="antC_${i}"></div></section>`).join("");
+  E.forEach((e,i)=>{tabelaAnt(e,i); graficoAnt(e,i);});
+  renderAntTit();
+}
+function subEmp(e){
+  const p=[]; if(e.ate_planilha) p.push(`Pago de ${mesC(e.inicio)} a ${mesC(e.ate_planilha)} pela planilha de controle (passe o mouse para ver o valor do Sienge)`);
+  if(e.sienge_de) p.push(`${e.ate_planilha?"depois":"Pago"} pelo Sienge (relatório de ${fmtD(e.sienge_de)} a ${fmtD(e.sienge_ate)})`);
+  return p.join("; ")+".";
+}
+function tabelaAnt(e,i){
+  const ms=Object.keys(e.meses), M=e.meses, tp=soma(ms,m=>M[m].pago||0), ta=soma(ms,m=>M[m].a_pagar||0);
+  const cel=(v,m,tit)=>`<td class="${!v?"zero":""}" ${tit?`title="${esc(tit)}"`:""}>${fmt0(v)}</td>`;
+  const ap=m=>EDITOR?`<td><input class="antIn" inputmode="decimal" data-m="${m}" value="${M[m].a_pagar==null?"":fmtN(M[m].a_pagar)}" aria-label="A pagar ${mesC(m)}"></td>`:cel(M[m].a_pagar,m);
+  $("antT_"+i).innerHTML=`<thead><tr><th class="l"></th>${ms.map(m=>`<th class="${M[m].fonte==="planilha"?"pl":""}" title="${M[m].fonte==="planilha"?"Pago pela planilha de controle":"Pago pelo Sienge"}">${mesC(m)}</th>`).join("")}<th>Total</th></tr></thead><tbody>
+    <tr><td>Pago</td>${ms.map(m=>cel(M[m].pago,m,M[m].fonte==="planilha"?`Planilha: ${fmtN(M[m].pago)} · Sienge pela regra: ${fmtN(M[m].sienge)} (${M[m].titulos} parcelas)`:`Sienge: ${M[m].titulos} parcelas`)).join("")}<td><b>${fmt0(tp)}</b></td></tr>
+    <tr><td>A pagar</td>${ms.map(ap).join("")}<td><b>${fmt0(ta)}</b></td></tr>
+    <tr class="tot"><td>Total</td>${ms.map(m=>`<td>${fmt0(antTot(M[m]))}</td>`).join("")}<td>${fmt0(tp+ta)}</td></tr></tbody>`;
+  $("antT_"+i).querySelectorAll("input.antIn").forEach(inp=>inp.onchange=async()=>{
+    const t=inp.value.trim(), v=t===""?null:Number(t.replace(/\./g,"").replace(",","."));
+    if(v!=null&&!isFinite(v)){toast("Valor inválido."); return;}
+    try{ await local("/antecipacao","POST",{empresa:e.empresa,mes:inp.dataset.m,valor:v}); toast(`A pagar de ${mesC(inp.dataset.m)} salvo. Publicando...`); acompanhar(); }
+    catch(err){ toast("Não foi possível salvar: "+err.message); }
+  });
+}
+function graficoAnt(e,i){
+  const box=$("antC_"+i), ms=Object.keys(e.meses), M=e.meses, cor=corE(e.empresa);
+  const W=Math.max(320,box.clientWidth||900), H=250, mg={l:44,r:8,t:22,b:24}, iw=W-mg.l-mg.r, ih=H-mg.t-mg.b;
+  const max=Math.max(1000,...ms.map(m=>antTot(M[m]))), step=niceStep(max/4), top=Math.ceil(max/step)*step;
+  const bw=iw/ms.length, y=v=>mg.t+ih-(v/top)*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Antecipações por mês em R$ mil">`;
+  for(let v=0;v<=top+1e-9;v+=step) s+=`<line x1="${mg.l}" x2="${W-mg.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${mg.l-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${(v/1000).toLocaleString("pt-BR")}</text>`;
+  ms.forEach((m,k)=>{const p=M[m].pago||0, a=M[m].a_pagar||0, x=mg.l+k*bw+bw*.18, w=bw*.64;
+    if(p>0) s+=`<rect x="${x}" y="${y(p)}" width="${w}" height="${y(0)-y(p)}" fill="${cor}" rx="2"><title>${mesC(m)} · Pago ${fmtN(p)}</title></rect>`;
+    if(a>0) s+=`<rect x="${x}" y="${y(p+a)}" width="${w}" height="${y(p)-y(p+a)}" fill="var(--s8)" rx="2"><title>${mesC(m)} · A pagar ${fmtN(a)}</title></rect>`;
+    if(p+a>0) s+=`<text x="${x+w/2}" y="${y(p+a)-5}" text-anchor="middle" font-size="${bw<44?9.5:11}" fill="var(--text-2)">${Math.round((p+a)/1000).toLocaleString("pt-BR")}</text>`;
+    s+=`<text x="${x+w/2}" y="${H-7}" text-anchor="middle" font-size="${bw<44?9.5:11}" fill="var(--muted)">${mesC(m)}</text>`;});
+  box.innerHTML=s+"</svg>";
+}
+function renderAntTit(){
+  const A=D.antecipacoes, q=($("qa").value||"").toLowerCase();
+  const L=(A.titulos||[]).filter(t=>st.emps.includes(t.empresa)&&(!q||(t.cliente+" "+t.documento).toLowerCase().includes(q)));
+  $("antTitSub").textContent=`${L.length} parcelas · ${fmtR(soma(L,t=>t.valor))} · detalhe do Sienge pela regra (inclui meses em que o painel usa a planilha)`;
+  $("tAntTit").innerHTML=`<thead><tr><th class="l">Pagamento</th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Vencimento</th><th>Meses à frente</th><th>Valor</th></tr></thead><tbody>`+
+    L.map(t=>`<tr><td class="l">${fmtD(t.baixa)}</td><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>${esc(t.tc)}</td><td>${fmtD(t.venc)}</td><td>${t.meses}</td><td>${fmtN(t.valor)}</td></tr>`).join("")+"</tbody>";
+}
+$("qa").oninput=()=>D&&renderAntTit();
+window.addEventListener("resize",()=>{clearTimeout(window._rza);window._rza=setTimeout(()=>{if(D&&ABA==="ant") antEmpresas().forEach((e,i)=>graficoAnt(e,i));},150)});
 
 /* ---------- menu lateral: destaca a seção que está na tela ---------- */
 (function(){
