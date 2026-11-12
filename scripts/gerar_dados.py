@@ -430,9 +430,11 @@ def resumo_tratamento(lista, data):
 
 
 def sem_ignorados(lst):
-    """Títulos em config.json > ignorar_titulos saem de tudo (base, semana anterior, Tratados), como se nunca tivessem existido."""
+    """Títulos em config.json > ignorar_titulos e tipos em excluir_tc (ex.: AT = aporte) saem de tudo
+    (base, semana anterior, Tratados), como se nunca tivessem existido."""
     ign = {chave(x["documento"], p) for x in cfg.get("ignorar_titulos", []) for p in x.get("parcelas", [])}
-    return [t for t in lst if t["chave"].split("#")[0] not in ign] if ign else lst
+    tcs = set(cfg.get("excluir_tc", []))
+    return [t for t in lst if t["chave"].split("#")[0] not in ign and (t.get("tc") or "") not in tcs]
 
 
 def montar():

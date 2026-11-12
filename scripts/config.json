@@ -65,5 +65,8 @@
       "obs": "PRIME AUDITORIA E CONSULTORIA EMPRESARIA - pago; desconsiderar do painel"
     }
   ],
-  "considerar_subjudice": false
+  "considerar_subjudice": false,
+  "excluir_tc": [
+    "AT"
+  ]
 }
