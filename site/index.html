@@ -689,10 +689,17 @@ function renderRec(){
   const pt=agu.filter(t=>t.status==="Pagamento em Trânsito"), rn=agu.filter(t=>t.status==="Renegociação"), outros=agu.filter(t=>t.status!=="Pagamento em Trânsito"&&t.status!=="Renegociação");
   $("recSub").innerHTML=`<b>Recuperado</b> = títulos que estavam na base de ${fmtD(D.data_anterior)}, não estão mais no Contas a Receber do Sienge de ${fmtD(D.data_base)} (foram pagos) e <b>não</b> foram tratados. Título que só saiu da base pela regra dos 10 dias continua em aberto e não conta. Os Tratados não-distrato ficam como <b>aguardando compensação</b> enquanto o título ainda estiver no Contas a Receber do Sienge.`;
   const V=v=>`${fmtMil(v)}<small>R$ mil</small>`;
+  // denominador dos tratados: inadimplência total (com tratados) da semana atual, como no Resumo
+  let tratAt=0; Object.entries(((D.em_tratamento||{}).atual||{}).por_empresa||{}).forEach(([e,v])=>{ if(st.emps.includes(e)) tratAt+=v.total; });
+  const totCom=soma(D.titulos.filter(okE))+tratAt, dA=fmtD(D.data_base).slice(0,5), dB=fmtD(D.data_anterior).slice(0,5);
+  const SEL={rec:{l:rec,val:sr,den:sb,kp:"% recuperação",sp:`do saldo de ${dB}`,tp:"Recuperado ÷ saldo da semana anterior",kc:"Clientes regularizados",sc:"com título recuperado"},
+    pt:{l:pt,val:soma(pt),den:totCom,kp:"% pagamento em trânsito",sp:`da inadimplência total de ${dA}`,tp:"Pagamento em trânsito ÷ inadimplência total (com tratados) da semana atual",kc:"Clientes em trânsito",sc:"com pagamento em trânsito"},
+    rn:{l:rn,val:soma(rn),den:totCom,kp:"% renegociação",sp:`da inadimplência total de ${dA}`,tp:"Renegociação ÷ inadimplência total (com tratados) da semana atual",kc:"Clientes em renegociação",sc:"com título em renegociação"},
+    dist:{l:dist,val:soma(dist),den:totCom,kp:"% distrato",sp:`da inadimplência total de ${dA}`,tp:"Distrato ÷ inadimplência total (com tratados) da semana atual",kc:"Clientes em distrato",sc:"com título em distrato"}}[RECSEL];
   $("recTiles").innerHTML=`
    <div class="tile clic" data-q="rec" role="button" tabindex="0" title="Clique para listar os títulos recuperados"><div class="k">Recuperado na semana</div><div class="v">${V(sr)}</div><div class="s">${rec.length} títulos</div></div>
-   <div class="tile" title="Recuperado ÷ saldo da semana anterior"><div class="k">% recuperação</div><div class="v">${fmtP(sb?sr/sb:null)}</div><div class="s">do saldo de ${fmtD(D.data_anterior).slice(0,5)}</div></div>
-   <div class="tile"><div class="k">Clientes regularizados</div><div class="v">${new Set(rec.map(t=>t.cd_cliente)).size}</div><div class="s">com título recuperado</div></div>
+   <div class="tile" title="${esc(SEL.tp)}"><div class="k">${SEL.kp}</div><div class="v">${fmtP(SEL.den?SEL.val/SEL.den:null)}</div><div class="s">${SEL.sp}</div></div>
+   <div class="tile"><div class="k">${SEL.kc}</div><div class="v">${new Set(SEL.l.map(t=>t.cd_cliente||t.cliente)).size}</div><div class="s">${SEL.sc}</div></div>
    <div class="tile clic" data-q="pt" role="button" tabindex="0" title="Tratados com status Pagamento em Trânsito que ainda estão no Contas a Receber do Sienge. Clique para listar"><div class="k">Pagamento em trânsito</div><div class="v">${V(soma(pt))}</div><div class="s">${pt.length} títulos</div></div>
    <div class="tile clic" data-q="rn" role="button" tabindex="0" title="Tratados com status Renegociação que ainda estão no Contas a Receber do Sienge. Clique para listar"><div class="k">Renegociação</div><div class="v">${V(soma(rn))}</div><div class="s">${rn.length} títulos${outros.length?` · outros: R$ ${fmtMil(soma(outros))} mil (${outros.length})`:""}</div></div>
    <div class="tile clic" data-q="dist" role="button" tabindex="0" title="Clique para listar os títulos em distrato"><div class="k">Distrato</div><div class="v">${V(soma(dist))}</div><div class="s">${dist.length} títulos${sem.length?` · <span class="alerta warn">${sem.length} sem status</span>`:""}</div></div>`;
