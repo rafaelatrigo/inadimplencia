@@ -61,7 +61,7 @@ def _publicar(origem, so_se_mudou):
         if "Nada a fazer" in saida:
             estado.update(resultado="sem_mudanca", mensagem="As bases não mudaram desde a última publicação."); return
         estado["etapa"] = "enviando"
-        rodar(["git", "pull", "--quiet", "--rebase", "origin", "main"])
+        rodar(["git", "pull", "--quiet", "--rebase", "--autostash", "origin", "main"])
         rodar(["git", "add", "-A"])
         if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=RAIZ, creationflags=NO_WIN).returncode == 0:
             estado.update(resultado="sem_mudanca", mensagem="Nada novo para enviar."); return
