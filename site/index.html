@@ -192,6 +192,11 @@ table.cmp{font-size:13px}
 .nav a{border-left:3px solid transparent}
 #recTiles{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
 #recTiles .tile{padding:8px 10px}
+#recTiles .tile.clic{cursor:pointer;transition:border-color .15s}
+#recTiles .tile.clic:hover{border-color:var(--s3)}
+#recTiles .tile.sel{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand);background:var(--brand-2)}
+#recTiles .tile.clic .k::after{content:" ›";color:var(--muted)}
+#recCap{font-size:13px;font-weight:650;margin:0 0 6px}
 @media (max-width:900px){#recTiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:560px){#recTiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .resumo{font-size:15px;line-height:1.6;margin:4px 0 14px;color:var(--text)}
@@ -238,8 +243,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Ir para</h3><nav class="nav" id="navAnt" style="display:none"><a href="#cAntRes">Resumo das antecipações</a><span id="navAntEmp" style="display:contents"></span><a href="#cAntTit">Parcelas antecipadas</a></nav><nav class="nav" id="navInad">
         <a href="#cRes">Resumo da semana</a><a href="#cRec">Recuperação de crédito</a><a href="#cConf" id="navConf">Conferência Sienge × planilha</a><a href="#cEmp">Por empreendimento</a><a href="#cPct">% Inadimplência</a><a href="#cSem">Evolução semanal</a>
-        <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Clientes inadimplentes</a>
-        <a href="#cBase">Títulos inadimplentes</a><a href="#cTrat">Tratados</a></nav></div>
+        <a href="#cAging">Aging</a><a href="#cTipo">Tipo de título</a><a href="#cTop">Clientes inadimplentes</a></nav></div>
     </details>
   </aside>
   <main>
@@ -270,6 +274,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <h2>Recuperação de crédito · comparativo semanal</h2>
       <p class="sub" id="recSub"></p>
       <section class="tiles" id="recTiles" style="margin-bottom:12px"></section>
+      <p id="recCap"></p>
       <div class="scroll"><table id="tRec" class="cmp"></table></div>
     </section>
     <section class="card hidden" id="cConf">
@@ -323,7 +328,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
     </section>
 
 
-    <section class="card" id="cBase">
+    <section class="card hidden" id="cBase">
       <h2>Títulos inadimplentes</h2>
       <p class="sub" id="baseSub"></p>
       <div class="barra">
@@ -335,7 +340,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
       <p class="foot" id="baseFoot"></p>
     </section>
 
-    <section class="card" id="cTrat">
+    <section class="card hidden" id="cTrat">
       <h2>Tratados</h2>
       <p class="sub" id="tratSub"></p>
       <div class="barra"><input class="search" id="qt" type="search" placeholder="Buscar cliente ou documento" aria-label="Buscar tratados" style="margin:0">
@@ -674,6 +679,7 @@ function renderTop(){
 }
 
 /* ---------- recuperação de crédito ---------- */
+let RECSEL="rec";
 function renderRec(){
   const ka=new Set(D.titulos.map(t=>t.chave)), kt=new Set(D.tratados.map(t=>t.chave));
   const kb=c=>String(c).split("#")[0], ab=D.abertos?new Set(D.abertos):null;
@@ -684,16 +690,28 @@ function renderRec(){
   $("recSub").innerHTML=`<b>Recuperado</b> = títulos que estavam na base de ${fmtD(D.data_anterior)}, não estão mais no Contas a Receber do Sienge de ${fmtD(D.data_base)} (foram pagos) e <b>não</b> foram tratados. Título que só saiu da base pela regra dos 10 dias continua em aberto e não conta. Os Tratados não-distrato ficam como <b>aguardando compensação</b> enquanto o título ainda estiver no Contas a Receber do Sienge.`;
   const V=v=>`${fmtMil(v)}<small>R$ mil</small>`;
   $("recTiles").innerHTML=`
-   <div class="tile"><div class="k">Recuperado na semana</div><div class="v">${V(sr)}</div><div class="s">${rec.length} títulos</div></div>
+   <div class="tile clic" data-q="rec" role="button" tabindex="0" title="Clique para listar os títulos recuperados"><div class="k">Recuperado na semana</div><div class="v">${V(sr)}</div><div class="s">${rec.length} títulos</div></div>
    <div class="tile" title="Recuperado ÷ saldo da semana anterior"><div class="k">% recuperação</div><div class="v">${fmtP(sb?sr/sb:null)}</div><div class="s">do saldo de ${fmtD(D.data_anterior).slice(0,5)}</div></div>
    <div class="tile"><div class="k">Clientes regularizados</div><div class="v">${new Set(rec.map(t=>t.cd_cliente)).size}</div><div class="s">com título recuperado</div></div>
-   <div class="tile" title="Tratados com status Pagamento em Trânsito que ainda estão no Contas a Receber do Sienge"><div class="k">Pagamento em trânsito</div><div class="v">${V(soma(pt))}</div><div class="s">${pt.length} títulos</div></div>
-   <div class="tile" title="Tratados com status Renegociação que ainda estão no Contas a Receber do Sienge"><div class="k">Renegociação</div><div class="v">${V(soma(rn))}</div><div class="s">${rn.length} títulos${outros.length?` · outros: R$ ${fmtMil(soma(outros))} mil (${outros.length})`:""}</div></div>
-   <div class="tile"><div class="k">Distrato</div><div class="v">${V(soma(dist))}</div><div class="s">${dist.length} títulos${sem.length?` · <span class="alerta warn">${sem.length} sem status</span>`:""}</div></div>`;
-  $("tRec").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Valor recuperado</th><th>% do total</th><th>% do cliente</th></tr></thead><tbody>`+
-    (rec.length?rec.sort((x,y)=>y.total-x.total).map((t,i)=>{const doCli=soma(ant.filter(x=>x.cd_cliente===t.cd_cliente));
-      return `<tr><td>${i+1}</td><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>${esc(t.tc)}</td><td>${fmtN(t.total)}</td><td>${fmtP(sr?t.total/sr:null)}</td><td>${fmtP(doCli?t.total/doCli:null)}</td></tr>`;}).join("")
-     :`<tr><td colspan="7" class="l" style="color:var(--muted)">Nenhum título recuperado nesta semana.</td></tr>`)+"</tbody>";
+   <div class="tile clic" data-q="pt" role="button" tabindex="0" title="Tratados com status Pagamento em Trânsito que ainda estão no Contas a Receber do Sienge. Clique para listar"><div class="k">Pagamento em trânsito</div><div class="v">${V(soma(pt))}</div><div class="s">${pt.length} títulos</div></div>
+   <div class="tile clic" data-q="rn" role="button" tabindex="0" title="Tratados com status Renegociação que ainda estão no Contas a Receber do Sienge. Clique para listar"><div class="k">Renegociação</div><div class="v">${V(soma(rn))}</div><div class="s">${rn.length} títulos${outros.length?` · outros: R$ ${fmtMil(soma(outros))} mil (${outros.length})`:""}</div></div>
+   <div class="tile clic" data-q="dist" role="button" tabindex="0" title="Clique para listar os títulos em distrato"><div class="k">Distrato</div><div class="v">${V(soma(dist))}</div><div class="s">${dist.length} títulos${sem.length?` · <span class="alerta warn">${sem.length} sem status</span>`:""}</div></div>`;
+  const L={rec:{t:"Recuperado na semana",l:rec},pt:{t:"Pagamento em trânsito",l:pt},rn:{t:"Renegociação",l:rn},dist:{t:"Distrato",l:dist}}[RECSEL];
+  $("recTiles").querySelectorAll(".tile.clic").forEach(el=>{el.classList.toggle("sel",el.dataset.q===RECSEL);
+    el.onclick=()=>{RECSEL=el.dataset.q; renderRec();}; el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); el.click();}};});
+  const lt=L.l.slice().sort((x,y)=>(y.total||0)-(x.total||0)), st_=soma(lt), nCli=new Set(lt.map(t=>t.cd_cliente||t.cliente)).size;
+  $("recCap").textContent=`${L.t} · ${lt.length} títulos · ${nCli} clientes · ${fmtR(st_)}`;
+  if(RECSEL==="rec"){
+    $("tRec").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Vencimento</th><th>Valor recuperado</th><th>% do total</th><th>% do cliente</th></tr></thead><tbody>`+
+      (lt.length?lt.map((t,i)=>{const doCli=soma(ant.filter(x=>x.cd_cliente===t.cd_cliente));
+        return `<tr><td>${i+1}</td><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>${esc(t.tc)}</td><td>${fmtD(t.venc)}</td><td>${fmtN(t.total)}</td><td>${fmtP(st_?t.total/st_:null)}</td><td>${fmtP(doCli?t.total/doCli:null)}</td></tr>`;}).join("")
+       :`<tr><td colspan="8" class="l" style="color:var(--muted)">Nenhum título recuperado nesta semana.</td></tr>`)+"</tbody>";
+  } else {
+    const dist_=RECSEL==="dist";
+    $("tRec").innerHTML=`<thead><tr><th>#</th><th class="l">Cliente</th><th class="l">Documento · parc.</th><th>TC</th><th>Vencimento</th><th>Total</th><th>% do total</th>${dist_?'<th class="l">No Sienge</th>':""}<th class="l">Observação</th></tr></thead><tbody>`+
+      (lt.length?lt.map((t,i)=>`<tr><td>${i+1}</td><td class="cl">${esc(t.cliente)}<span class="mini">${esc(nomeE(t.empresa))}</span></td><td class="l">${esc(t.documento)} · ${esc(t.parc)}</td><td>${esc(t.tc||"")}</td><td>${fmtD(t.venc)}</td><td>${fmtN(t.total)}</td><td>${fmtP(st_?(t.total||0)/st_:null)}</td>${dist_?`<td class="l">${t.no_sienge?"em aberto":"já saiu"}</td>`:""}<td class="wrap">${esc(t.obs||"")}</td></tr>`).join("")
+       :`<tr><td colspan="9" class="l" style="color:var(--muted)">Nenhum título.</td></tr>`)+"</tbody>";
+  }
 }
 
 /* ---------- base de títulos (com Tratar) ---------- */
