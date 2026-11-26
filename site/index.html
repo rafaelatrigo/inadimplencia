@@ -243,7 +243,7 @@ table.cmp td.wrap{min-width:180px;max-width:320px}
     </details>
   </aside>
   <main>
-    <div class="abas" role="tablist"><button type="button" role="tab" id="abaInad" aria-selected="true">Inadimplência</button><button type="button" role="tab" id="abaAnt" aria-selected="false">Antecipações</button></div>
+    <div class="abas hidden" role="tablist"><button type="button" role="tab" id="abaInad" aria-selected="true">Inadimplência</button><button type="button" role="tab" id="abaAnt" aria-selected="false">Antecipações</button></div>
     <div id="avisos"></div>
     <div id="vAnt" class="hidden">
     <section class="card" id="cAntRes" style="border-top:3px solid var(--brand)">
@@ -770,7 +770,7 @@ function renderConf(){
 }
 
 /* ---------- aba Antecipações ---------- */
-let ABA="inad"; try{ABA=localStorage.getItem("inad-aba")||"inad"}catch(e){}
+let ABA="inad";   // aba Antecipações oculta por enquanto: sempre abre em Inadimplência
 function mostrarAba(a){
   ABA=a; try{localStorage.setItem("inad-aba",a)}catch(e){}
   $("abaInad").setAttribute("aria-selected",a==="inad"); $("abaAnt").setAttribute("aria-selected",a==="ant");
