@@ -676,11 +676,12 @@ function renderTop(){
 /* ---------- recuperação de crédito ---------- */
 function renderRec(){
   const ka=new Set(D.titulos.map(t=>t.chave)), kt=new Set(D.tratados.map(t=>t.chave));
-  const ant=AN(), rec=ant.filter(t=>!ka.has(t.chave)&&!kt.has(t.chave)), sb=soma(ant), sr=soma(rec);
+  const kb=c=>String(c).split("#")[0], ab=D.abertos?new Set(D.abertos):null;
+  const ant=AN(), rec=ant.filter(t=>!ka.has(t.chave)&&!kt.has(t.chave)&&!kt.has(kb(t.chave))&&!(ab&&ab.has(kb(t.chave)+"|"+t.venc))), sb=soma(ant), sr=soma(rec);
   const tr=D.tratados.filter(okE), cx=c=>tr.filter(t=>t.caixa===c);
   const agu=cx("Aguardando compensação").filter(t=>t.no_sienge), dist=cx("Distrato"), sem=cx("Sem status");
   const pt=agu.filter(t=>t.status==="Pagamento em Trânsito"), rn=agu.filter(t=>t.status==="Renegociação"), outros=agu.filter(t=>t.status!=="Pagamento em Trânsito"&&t.status!=="Renegociação");
-  $("recSub").innerHTML=`<b>Recuperado</b> = títulos que estavam na base de ${fmtD(D.data_anterior)}, saíram da base de ${fmtD(D.data_base)} e <b>não</b> foram tratados. Os Tratados não-distrato ficam como <b>aguardando compensação</b> enquanto o título ainda estiver no Contas a Receber do Sienge.`;
+  $("recSub").innerHTML=`<b>Recuperado</b> = títulos que estavam na base de ${fmtD(D.data_anterior)}, não estão mais no Contas a Receber do Sienge de ${fmtD(D.data_base)} (foram pagos) e <b>não</b> foram tratados. Título que só saiu da base pela regra dos 10 dias continua em aberto e não conta. Os Tratados não-distrato ficam como <b>aguardando compensação</b> enquanto o título ainda estiver no Contas a Receber do Sienge.`;
   const V=v=>`${fmtMil(v)}<small>R$ mil</small>`;
   $("recTiles").innerHTML=`
    <div class="tile"><div class="k">Recuperado na semana</div><div class="v">${V(sr)}</div><div class="s">${rec.length} títulos</div></div>

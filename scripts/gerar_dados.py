@@ -558,6 +558,9 @@ def montar():
                      "subjudice_docs": sorted(subj), "datas_estranhas": cob["datas_estranhas"]},
         "esperado": esperado_por_mes(),
         "antecipacoes": montar_antecipacoes(cfg, DADOS, empreendimentos, avisos),
+        # títulos ainda em aberto no Contas a Receber (todos, antes da regra dos 10 dias): documento|parcela|vencimento.
+        # Recuperado = saiu daqui; título que só saiu da base pela regra dos 10 dias continua em aberto e não conta.
+        "abertos": sorted({f"{r['chave'].split('#')[0]}|{r['venc']}" for r in sienge}) if sienge else None,
         "fechamentos": ler_json(DADOS / "fechamentos.json", []),
         "fora_regra": fora_regra,
         "em_tratamento": {"atual": trat_atual, "anterior": trat_ant},
