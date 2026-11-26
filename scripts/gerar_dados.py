@@ -75,7 +75,7 @@ def achar_csv():
             continue
         if "Data vecto" in cab and "Nome Empresa" in cab:
             cand.append(f)
-    f = mais_recente(cand)
+    f = max(cand, key=lambda x: (data_do_arquivo(x), x.stat().st_mtime)) if cand else None   # o de data mais recente no nome
     if not f:
         sys.exit(f"Não achei o CSV do Contas a Receber em {ENTRADA}\n(cabeçalho com 'Data vecto' e 'Nome Empresa').")
     return f
